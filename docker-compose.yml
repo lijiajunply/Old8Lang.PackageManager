@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  old8lang-package-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    volumes:
+      - ./packages:/app/packages
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：添加数据库（如果使用 SQL Server/PostgreSQL）
+  # database:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: old8lang_packages
+  #     POSTGRES_USER: old8lang
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

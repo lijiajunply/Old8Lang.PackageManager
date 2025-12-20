@@ -1,0 +1,6 @@
+@Old8Lang.PackageManager.Server_HostAddress = http://localhost:5102
+
+GET {{Old8Lang.PackageManager.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
