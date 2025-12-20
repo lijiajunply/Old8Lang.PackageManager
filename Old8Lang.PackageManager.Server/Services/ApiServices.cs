@@ -139,10 +139,10 @@ public class ApiKeyService : IApiKeyService
 /// </summary>
 public interface IPackageSearchService
 {
-    Task<PackageSearchResponse> SearchAsync(string query, int skip = 0, int take = 20);
-    Task<PackageSearchResponse> GetPopularAsync(int take = 20);
-    Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string version);
-    Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId);
+    Task<PackageSearchResponse> SearchAsync(string query, string? language = null, int skip = 0, int take = 20);
+    Task<PackageSearchResponse> GetPopularAsync(string? language = null, int take = 20);
+    Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string version, string? language = null);
+    Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string? language = null);
 }
 
 /// <summary>
@@ -159,10 +159,10 @@ public class PackageSearchService : IPackageSearchService
         _apiOptions = apiOptions;
     }
     
-    public async Task<PackageSearchResponse> SearchAsync(string query, int skip = 0, int take = 20)
+    public async Task<PackageSearchResponse> SearchAsync(string query, string? language = null, int skip = 0, int take = 20)
     {
-        var packages = await _packageService.SearchPackagesAsync(query, skip, take);
-        var totalHits = await GetTotalHitsAsync(query);
+        var packages = await _packageService.SearchPackagesAsync(query, language, skip, take);
+        var totalHits = await GetTotalHitsAsync(query, language);
         
         return new PackageSearchResponse
         {
@@ -171,9 +171,9 @@ public class PackageSearchService : IPackageSearchService
         };
     }
     
-    public async Task<PackageSearchResponse> GetPopularAsync(int take = 20)
+    public async Task<PackageSearchResponse> GetPopularAsync(string? language = null, int take = 20)
     {
-        var packages = await _packageService.GetPopularPackagesAsync(take);
+        var packages = await _packageService.GetPopularPackagesAsync(language, take);
         
         return new PackageSearchResponse
         {
@@ -182,9 +182,9 @@ public class PackageSearchService : IPackageSearchService
         };
     }
     
-    public async Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string version)
+    public async Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string version, string? language = null)
     {
-        var package = await _packageService.GetPackageAsync(packageId, version);
+        var package = await _packageService.GetPackageAsync(packageId, version, language);
         if (package == null)
         {
             return null;
@@ -193,7 +193,7 @@ public class PackageSearchService : IPackageSearchService
         return MapToDetailResponse(package);
     }
     
-    public async Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId)
+    public async Task<PackageDetailResponse?> GetPackageDetailsAsync(string packageId, string? language = null)
     {
         var versions = await _packageService.GetAllVersionsAsync(packageId);
         if (!versions.Any())
@@ -201,11 +201,21 @@ public class PackageSearchService : IPackageSearchService
             return null;
         }
         
-        var latestVersion = versions.OrderByDescending(v => v.PublishedAt).First();
+        // 筛选指定语言的包
+        var filteredVersions = string.IsNullOrEmpty(language) 
+            ? versions 
+            : versions.Where(v => v.Language == language).ToList();
+        
+        if (!filteredVersions.Any())
+        {
+            return null;
+        }
+        
+        var latestVersion = filteredVersions.OrderByDescending(v => v.PublishedAt).First();
         var detailResponse = MapToDetailResponse(latestVersion);
         
         // 添加所有版本信息
-        detailResponse.Versions = versions.Select(v => new PackageVersionInfo
+        detailResponse.Versions = filteredVersions.Select(v => new PackageVersionInfo
         {
             Version = v.Version,
             PublishedAt = v.PublishedAt,
@@ -218,10 +228,10 @@ public class PackageSearchService : IPackageSearchService
         return detailResponse;
     }
     
-    private async Task<int> GetTotalHitsAsync(string query)
+    private async Task<int> GetTotalHitsAsync(string query, string? language = null)
     {
         // 简化实现，实际应该使用更高效的计数查询
-        var results = await _packageService.SearchPackagesAsync(query, 0, int.MaxValue);
+        var results = await _packageService.SearchPackagesAsync(query, language, 0, int.MaxValue);
         return results.Count;
     }
     
@@ -231,6 +241,7 @@ public class PackageSearchService : IPackageSearchService
         {
             PackageId = package.PackageId,
             Version = package.Version,
+            Language = package.Language,
             Description = package.Description,
             Author = package.Author,
             Tags = package.PackageTags.Select(t => t.Tag).ToList(),
@@ -246,6 +257,7 @@ public class PackageSearchService : IPackageSearchService
         {
             PackageId = package.PackageId,
             Version = package.Version,
+            Language = package.Language,
             Description = package.Description,
             Author = package.Author,
             License = package.License,
@@ -256,6 +268,15 @@ public class PackageSearchService : IPackageSearchService
                 PackageId = d.DependencyId,
                 VersionRange = d.VersionRange,
                 IsRequired = d.IsRequired
+            }).ToList(),
+            ExternalDependencies = package.ExternalDependencies.Select(d => new ExternalDependencyInfo
+            {
+                DependencyType = d.DependencyType,
+                PackageName = d.PackageName,
+                VersionSpec = d.VersionSpec,
+                IndexUrl = d.IndexUrl,
+                ExtraIndexUrl = d.ExtraIndexUrl,
+                IsDevDependency = d.IsDevDependency
             }).ToList(),
             PublishedAt = package.PublishedAt,
             UpdatedAt = package.UpdatedAt,

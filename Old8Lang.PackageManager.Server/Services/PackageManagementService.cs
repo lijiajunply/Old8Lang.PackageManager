@@ -10,14 +10,14 @@ namespace Old8Lang.PackageManager.Server.Services;
 /// </summary>
 public interface IPackageManagementService
 {
-    Task<PackageEntity?> GetPackageAsync(string packageId, string version);
+    Task<PackageEntity?> GetPackageAsync(string packageId, string version, string? language = null);
     Task<List<PackageEntity>> GetAllVersionsAsync(string packageId);
-    Task<List<PackageEntity>> SearchPackagesAsync(string searchTerm, int skip = 0, int take = 20);
-    Task<List<PackageEntity>> GetPopularPackagesAsync(int take = 10);
+    Task<List<PackageEntity>> SearchPackagesAsync(string searchTerm, string? language = null, int skip = 0, int take = 20);
+    Task<List<PackageEntity>> GetPopularPackagesAsync(string? language = null, int take = 10);
     Task<PackageEntity> UploadPackageAsync(PackageUploadRequest request, Stream packageStream);
     Task<bool> DeletePackageAsync(string packageId, string version);
     Task<bool> IncrementDownloadCountAsync(string packageId, string version);
-    Task<bool> PackageExistsAsync(string packageId, string version);
+    Task<bool> PackageExistsAsync(string packageId, string version, string? language = null);
 }
 
 /// <summary>
@@ -28,24 +28,35 @@ public class PackageManagementService : IPackageManagementService
     private readonly PackageManagerDbContext _dbContext;
     private readonly IPackageStorageService _storageService;
     private readonly ILogger<PackageManagementService> _logger;
+    private readonly IPythonPackageParser _pythonParser;
     
     public PackageManagementService(
         PackageManagerDbContext dbContext,
         IPackageStorageService storageService,
-        ILogger<PackageManagementService> logger)
+        ILogger<PackageManagementService> logger,
+        IPythonPackageParser pythonParser)
     {
         _dbContext = dbContext;
         _storageService = storageService;
         _logger = logger;
+        _pythonParser = pythonParser;
     }
     
-    public async Task<PackageEntity?> GetPackageAsync(string packageId, string version)
+    public async Task<PackageEntity?> GetPackageAsync(string packageId, string version, string? language = null)
     {
-        return await _dbContext.Packages
+        var query = _dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Include(p => p.Files)
-            .FirstOrDefaultAsync(p => p.PackageId == packageId && p.Version == version);
+            .Include(p => p.ExternalDependencies)
+            .Where(p => p.PackageId == packageId && p.Version == version);
+            
+        if (!string.IsNullOrEmpty(language))
+        {
+            query = query.Where(p => p.Language == language);
+        }
+        
+        return await query.FirstOrDefaultAsync();
     }
     
     public async Task<List<PackageEntity>> GetAllVersionsAsync(string packageId)
@@ -58,12 +69,20 @@ public class PackageManagementService : IPackageManagementService
             .ToListAsync();
     }
     
-    public async Task<List<PackageEntity>> SearchPackagesAsync(string searchTerm, int skip = 0, int take = 20)
+    public async Task<List<PackageEntity>> SearchPackagesAsync(string searchTerm, string? language = null, int skip = 0, int take = 20)
     {
         var query = _dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
+            .Include(p => p.Files)
+            .Include(p => p.ExternalDependencies)
             .Where(p => p.IsListed);
+        
+        // 语言筛选
+        if (!string.IsNullOrEmpty(language))
+        {
+            query = query.Where(p => p.Language == language.ToLowerInvariant());
+        }
         
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -82,12 +101,21 @@ public class PackageManagementService : IPackageManagementService
             .ToListAsync();
     }
     
-    public async Task<List<PackageEntity>> GetPopularPackagesAsync(int take = 10)
+    public async Task<List<PackageEntity>> GetPopularPackagesAsync(string? language = null, int take = 10)
     {
-        return await _dbContext.Packages
+        var query = _dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
-            .Where(p => p.IsListed && !p.IsPrerelease)
+            .Include(p => p.ExternalDependencies)
+            .Where(p => p.IsListed && !p.IsPrerelease);
+        
+        // 语言筛选
+        if (!string.IsNullOrEmpty(language))
+        {
+            query = query.Where(p => p.Language == language.ToLowerInvariant());
+        }
+        
+        return await query
             .OrderByDescending(p => p.DownloadCount)
             .ThenByDescending(p => p.PublishedAt)
             .Take(take)
@@ -97,17 +125,17 @@ public class PackageManagementService : IPackageManagementService
     public async Task<PackageEntity> UploadPackageAsync(PackageUploadRequest request, Stream packageStream)
     {
         // 解析包信息
-        var packageInfo = await ExtractPackageInfoAsync(packageStream);
+        var packageInfo = await ExtractPackageInfoAsync(packageStream, request.PackageFile.FileName);
         if (packageInfo == null)
         {
             throw new InvalidOperationException("无法解析包信息");
         }
         
         // 检查包是否已存在
-        var existingPackage = await GetPackageAsync(packageInfo.Id, packageInfo.Version);
+        var existingPackage = await GetPackageAsync(packageInfo.Id, packageInfo.Version, request.Language);
         if (existingPackage != null)
         {
-            throw new InvalidOperationException($"包 {packageInfo.Id} 版本 {packageInfo.Version} 已存在");
+            throw new InvalidOperationException($"包 {packageInfo.Id} 版本 {packageInfo.Version} (语言: {request.Language}) 已存在");
         }
         
         // 重置流位置
@@ -124,6 +152,7 @@ public class PackageManagementService : IPackageManagementService
         {
             PackageId = packageInfo.Id,
             Version = packageInfo.Version,
+            Language = request.Language.ToLowerInvariant(),
             Description = request.Description ?? packageInfo.Description,
             Author = request.Author ?? packageInfo.Author,
             License = request.License,
@@ -157,6 +186,31 @@ public class PackageManagementService : IPackageManagementService
                 VersionRange = dependency.VersionRange,
                 IsRequired = dependency.IsRequired,
                 TargetFramework = ""
+            });
+        }
+        
+        // 添加外部依赖（用于 Python 包等）
+        foreach (var externalDep in request.ExternalDependencies)
+        {
+            packageEntity.ExternalDependencies.Add(new ExternalDependencyEntity
+            {
+                DependencyType = externalDep.DependencyType,
+                PackageName = externalDep.PackageName,
+                VersionSpec = externalDep.VersionSpec,
+                IndexUrl = externalDep.IndexUrl,
+                ExtraIndexUrl = externalDep.ExtraIndexUrl,
+                IsDevDependency = externalDep.IsDevDependency
+            });
+        }
+        
+        // 添加语言特定元数据
+        if (!string.IsNullOrEmpty(request.LanguageMetadata))
+        {
+            packageEntity.LanguageMetadata.Add(new LanguageMetadataEntity
+            {
+                Language = request.Language.ToLowerInvariant(),
+                Metadata = request.LanguageMetadata,
+                UpdatedAt = DateTime.UtcNow
             });
         }
         
@@ -212,41 +266,100 @@ public class PackageManagementService : IPackageManagementService
         return true;
     }
     
-    public async Task<bool> PackageExistsAsync(string packageId, string version)
+    public async Task<bool> PackageExistsAsync(string packageId, string version, string? language = null)
     {
-        return await _dbContext.Packages
-            .AnyAsync(p => p.PackageId == packageId && p.Version == version);
+        var query = _dbContext.Packages
+            .Where(p => p.PackageId == packageId && p.Version == version);
+            
+        if (!string.IsNullOrEmpty(language))
+        {
+            query = query.Where(p => p.Language == language);
+        }
+        
+        return await query.AnyAsync();
     }
     
-    private async Task<Package?> ExtractPackageInfoAsync(Stream packageStream)
+    private async Task<Package?> ExtractPackageInfoAsync(Stream packageStream, string fileName)
     {
         try
         {
-            // 这里应该实现解压 .o8pkg 文件并读取 package.json 的逻辑
-            // 为简化示例，返回默认的包信息
+            // 根据文件扩展名判断语言
+            var language = DeterminePackageLanguage(fileName);
             
-            // 临时实现：假设从文件名解析包信息
-            packageStream.Position = 0;
-            using var reader = new StreamReader(packageStream);
-            var firstLine = await reader.ReadLineAsync();
-            packageStream.Position = 0;
-            
-            // 实际实现应该使用 ZIP 库解压并读取 package.json
-            return new Package
+            switch (language)
             {
-                Id = "UnknownPackage",
-                Version = "1.0.0",
-                Description = "",
-                Author = "",
-                Tags = new List<string>(),
-                Dependencies = new List<PackageDependency>()
-            };
+                case "old8lang":
+                    return await ExtractOld8LangPackageInfoAsync(packageStream, fileName);
+                case "python":
+                    return await ExtractPythonPackageInfoAsync(packageStream, fileName);
+                default:
+                    _logger.LogWarning("不支持的包格式: {FileName}", fileName);
+                    return null;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析包信息失败");
+            _logger.LogError(ex, "解析包信息失败: {FileName}", fileName);
             return null;
         }
+    }
+    
+    private async Task<Package?> ExtractOld8LangPackageInfoAsync(Stream packageStream, string fileName)
+    {
+        // 这里应该实现解压 .o8pkg 文件并读取 package.json 的逻辑
+        // 为简化示例，返回默认的包信息
+        
+        packageStream.Position = 0;
+        using var reader = new StreamReader(packageStream);
+        var firstLine = await reader.ReadLineAsync();
+        packageStream.Position = 0;
+        
+        // 实际实现应该使用 ZIP 库解压并读取 package.json
+        return new Package
+        {
+            Id = "UnknownPackage",
+            Version = "1.0.0",
+            Description = "",
+            Author = "",
+            Tags = new List<string>(),
+            Dependencies = new List<PackageDependency>()
+        };
+    }
+    
+    private async Task<Package?> ExtractPythonPackageInfoAsync(Stream packageStream, string fileName)
+    {
+        var pythonInfo = await _pythonParser.ParsePackageAsync(packageStream, fileName);
+        
+        if (pythonInfo == null)
+            return null;
+        
+        return new Package
+        {
+            Id = pythonInfo.PackageId,
+            Version = pythonInfo.Version,
+            Description = pythonInfo.Summary,
+            Author = pythonInfo.Author,
+            Tags = pythonInfo.Keywords,
+            Dependencies = pythonInfo.Dependencies.Select(d => new PackageDependency
+            {
+                PackageId = d.PackageName,
+                VersionRange = d.VersionSpec,
+                IsRequired = true
+            }).ToList()
+        };
+    }
+    
+    private string DeterminePackageLanguage(string fileName)
+    {
+        var lowerFileName = fileName.ToLowerInvariant();
+        
+        if (lowerFileName.EndsWith(".o8pkg"))
+            return "old8lang";
+        
+        if (lowerFileName.EndsWith(".whl") || lowerFileName.EndsWith(".tar.gz"))
+            return "python";
+        
+        return "unknown";
     }
     
     private static bool IsPrereleaseVersion(string version)

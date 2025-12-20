@@ -17,6 +17,8 @@ public class PackageManagerDbContext : DbContext
     public DbSet<PackageDependencyEntity> PackageDependencies { get; set; }
     public DbSet<PackageFileEntity> PackageFiles { get; set; }
     public DbSet<ApiKeyEntity> ApiKeys { get; set; }
+    public DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; }
+    public DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,8 +30,10 @@ public class PackageManagerDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.PackageId).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Version).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => new { e.PackageId, e.Version }).IsUnique();
+            entity.Property(e => e.Language).IsRequired().HasMaxLength(20).HasDefaultValue("old8lang");
+            entity.HasIndex(e => new { e.PackageId, e.Version, e.Language }).IsUnique();
             entity.HasIndex(e => e.PackageId);
+            entity.HasIndex(e => e.Language);
             entity.HasIndex(e => e.PublishedAt);
             entity.HasIndex(e => e.DownloadCount);
         });
@@ -78,6 +82,38 @@ public class PackageManagerDbContext : DbContext
             entity.Property(e => e.Key).IsRequired().HasMaxLength(500);
             entity.HasIndex(e => e.Key).IsUnique();
             entity.HasIndex(e => e.ExpiresAt);
+        });
+        
+        // ExternalDependencyEntity 配置
+        modelBuilder.Entity<ExternalDependencyEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DependencyType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PackageName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.VersionSpec).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IndexUrl).HasMaxLength(50);
+            entity.Property(e => e.ExtraIndexUrl).HasMaxLength(50);
+            
+            entity.HasOne(e => e.Package)
+                  .WithMany(p => p.ExternalDependencies)
+                  .HasForeignKey(e => e.PackageEntityId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        // LanguageMetadataEntity 配置
+        modelBuilder.Entity<LanguageMetadataEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Language).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Metadata).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+            
+            entity.HasOne(e => e.Package)
+                  .WithMany()
+                  .HasForeignKey(e => e.PackageEntityId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasIndex(e => new { e.PackageEntityId, e.Language }).IsUnique();
         });
         
         // 数据种子

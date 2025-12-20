@@ -19,6 +19,9 @@ builder.Services.AddScoped<IPackageStorageService, PackageStorageService>();
 builder.Services.AddScoped<IPackageManagementService, PackageManagementService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IPackageSearchService, PackageSearchService>();
+builder.Services.AddScoped<IPythonPackageParser, PythonPackageParser>();
+builder.Services.AddScoped<IPackageSignatureService, PackageSignatureService>();
+builder.Services.AddScoped<IPackageIntegrityService, PackageIntegrityService>();
 
 // 添加控制器
 builder.Services.AddControllers();

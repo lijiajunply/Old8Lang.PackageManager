@@ -39,19 +39,21 @@ public class PackagesController : ControllerBase
     /// 搜索包
     /// </summary>
     /// <param name="q">搜索关键词</param>
+    /// <param name="language">语言筛选 (old8lang, python)</param>
     /// <param name="skip">跳过数量</param>
     /// <param name="take">获取数量</param>
     /// <param name="prerelease">是否包含预发布版本</param>
     [HttpGet("search")]
     public async Task<ActionResult<PackageSearchResponse>> SearchPackages(
         [FromQuery] string q = "",
+        [FromQuery] string? language = null,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
         [FromQuery] bool prerelease = false)
     {
         try
         {
-            var result = await _searchService.SearchAsync(q, skip, take);
+            var result = await _searchService.SearchAsync(q, language, skip, take);
             return Ok(result);
         }
         catch (Exception ex)
@@ -64,13 +66,16 @@ public class PackagesController : ControllerBase
     /// <summary>
     /// 获取热门包
     /// </summary>
+    /// <param name="language">语言筛选 (old8lang, python)</param>
     /// <param name="take">获取数量</param>
     [HttpGet("popular")]
-    public async Task<ActionResult<PackageSearchResponse>> GetPopularPackages([FromQuery] int take = 20)
+    public async Task<ActionResult<PackageSearchResponse>> GetPopularPackages(
+        [FromQuery] string? language = null,
+        [FromQuery] int take = 20)
     {
         try
         {
-            var result = await _searchService.GetPopularAsync(take);
+            var result = await _searchService.GetPopularAsync(language, take);
             return Ok(result);
         }
         catch (Exception ex)
@@ -85,10 +90,12 @@ public class PackagesController : ControllerBase
     /// </summary>
     /// <param name="id">包 ID</param>
     /// <param name="version">包版本（可选）</param>
+    /// <param name="language">语言（可选）</param>
     [HttpGet("package/{id}")]
     public async Task<ActionResult<PackageDetailResponse>> GetPackageDetails(
         [FromRoute] string id,
-        [FromQuery] string? version = null)
+        [FromQuery] string? version = null,
+        [FromQuery] string? language = null)
     {
         try
         {
@@ -96,11 +103,11 @@ public class PackagesController : ControllerBase
             
             if (!string.IsNullOrEmpty(version))
             {
-                result = await _searchService.GetPackageDetailsAsync(id, version);
+                result = await _searchService.GetPackageDetailsAsync(id, version, language);
             }
             else
             {
-                result = await _searchService.GetPackageDetailsAsync(id);
+                result = await _searchService.GetPackageDetailsAsync(id, language);
             }
             
             if (result == null)
@@ -112,7 +119,7 @@ public class PackagesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取包详细信息失败: {PackageId} {Version}", id, version);
+            _logger.LogError(ex, "获取包详细信息失败: {PackageId} {Version} {Language}", id, version, language);
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取包详细信息失败"));
         }
     }

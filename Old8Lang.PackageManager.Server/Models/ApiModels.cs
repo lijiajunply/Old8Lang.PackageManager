@@ -10,6 +10,7 @@ public class PackageSearchResult
 {
     public string PackageId { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string Language { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
@@ -34,12 +35,15 @@ public class PackageDetailResponse
 {
     public string PackageId { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string Language { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string License { get; set; } = string.Empty;
     public string ProjectUrl { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
     public List<PackageDependency> Dependencies { get; set; } = new();
+    public List<ExternalDependencyInfo> ExternalDependencies { get; set; } = new();
+    public Dictionary<string, string> LanguageMetadata { get; set; } = new();
     public DateTime PublishedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public long DownloadCount { get; set; }
@@ -69,12 +73,28 @@ public class PackageVersionInfo
 public class PackageUploadRequest
 {
     public IFormFile PackageFile { get; set; } = null!;
+    public string Language { get; set; } = "old8lang"; // old8lang, python
     public string Author { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
     public string License { get; set; } = string.Empty;
     public string ProjectUrl { get; set; } = string.Empty;
     public bool IsPrerelease { get; set; }
+    public string LanguageMetadata { get; set; } = string.Empty; // JSON 格式的语言特定元数据
+    public List<ExternalDependencyInfo> ExternalDependencies { get; set; } = new();
+}
+
+/// <summary>
+/// 外部依赖信息
+/// </summary>
+public class ExternalDependencyInfo
+{
+    public string DependencyType { get; set; } = string.Empty; // pip, conda, npm, etc.
+    public string PackageName { get; set; } = string.Empty;
+    public string VersionSpec { get; set; } = string.Empty;
+    public string IndexUrl { get; set; } = string.Empty;
+    public string ExtraIndexUrl { get; set; } = string.Empty;
+    public bool IsDevDependency { get; set; }
 }
 
 /// <summary>
