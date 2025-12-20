@@ -1,0 +1,32 @@
+{
+  "Version": "1.0.0",
+  "ProjectName": "MyOld8LangProject",
+  "Framework": "old8lang-1.0",
+  "InstallPath": "packages",
+  "Sources": [
+    {
+      "Name": "Old8Lang Official",
+      "Source": "https://packages.old8lang.org/v3/index.json",
+      "IsEnabled": true
+    },
+    {
+      "Name": "Local Packages",
+      "Source": "./local-packages",
+      "IsEnabled": true
+    }
+  ],
+  "References": [
+    {
+      "PackageId": "Logger",
+      "Version": "1.2.0",
+      "IsDevelopmentDependency": false,
+      "TargetFramework": "old8lang-1.0"
+    },
+    {
+      "PackageId": "TestingFramework",
+      "Version": "2.1.0",
+      "IsDevelopmentDependency": true,
+      "TargetFramework": "old8lang-1.0"
+    }
+  ]
+}
