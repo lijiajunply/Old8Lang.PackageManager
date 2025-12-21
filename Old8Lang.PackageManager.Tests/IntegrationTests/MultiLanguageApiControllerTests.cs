@@ -7,6 +7,9 @@ using Old8Lang.PackageManager.Server.Controllers;
 using Old8Lang.PackageManager.Server.Models;
 using Old8Lang.PackageManager.Server.Services;
 using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Old8Lang.PackageManager.Server.Configuration;
 
 namespace Old8Lang.PackageManager.Tests.IntegrationTests;
 
@@ -30,11 +33,11 @@ public class MultiLanguageApiControllerTests
         _mockPyPiLogger = new Mock<ILogger<PyPIController>>();
 
         _packagesController = new PackagesController(
-            _mockPackageService.Object,
             _mockSearchService.Object,
+            _mockPackageService.Object,
+            new Mock<IApiKeyService>().Object,
             new Mock<ApiOptions>().Object,
-            _mockLogger.Object,
-            new Mock<IApiKeyService>().Object);
+            _mockLogger.Object);
 
         _pyPiController = new PyPIController(
             _mockPackageService.Object,

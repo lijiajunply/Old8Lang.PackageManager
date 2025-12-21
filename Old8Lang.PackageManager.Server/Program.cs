@@ -20,6 +20,7 @@ builder.Services.AddScoped<IPackageManagementService, PackageManagementService>(
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IPackageSearchService, PackageSearchService>();
 builder.Services.AddScoped<IPythonPackageParser, PythonPackageParser>();
+builder.Services.AddScoped<IJavaScriptPackageParser, JavaScriptPackageParser>();
 builder.Services.AddScoped<IPackageSignatureService, PackageSignatureService>();
 builder.Services.AddScoped<IPackageIntegrityService, PackageIntegrityService>();
 

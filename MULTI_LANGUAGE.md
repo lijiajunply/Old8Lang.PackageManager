@@ -18,6 +18,12 @@ Old8Lang Package Manager 现已支持多语言包管理，包括 Old8Lang 和 Py
 - **PyPI 兼容**: 完全兼容 PyPI API
 - **依赖管理**: pip, conda 支持
 
+### JavaScript/TypeScript (javascript/typescript)
+- **包格式**: `.tgz`, `.tar.gz` (npm tarball)
+- **配置文件**: `package.json`
+- **NPM 兼容**: 完全兼容 NPM Registry API
+- **依赖管理**: npm, yarn, pnpm 支持
+
 ## 🚀 快速开始
 
 ### 配置多语言包源
@@ -40,6 +46,12 @@ Old8Lang Package Manager 现已支持多语言包管理，包括 Old8Lang 和 Py
       "source": "https://packages.old8lang.org/simple",
       "isEnabled": true,
       "languages": ["python"]
+    },
+    {
+      "name": "JavaScript/TypeScript Packages",
+      "source": "https://packages.old8lang.org/npm",
+      "isEnabled": true,
+      "languages": ["javascript", "typescript"]
     }
   ],
   "references": [
@@ -52,6 +64,11 @@ Old8Lang Package Manager 现已支持多语言包管理，包括 Old8Lang 和 Py
       "packageId": "requests",
       "version": ">=2.28.0",
       "language": "python"
+    },
+    {
+      "packageId": "lodash",
+      "version": "^4.17.21",
+      "language": "javascript"
     }
   ]
 }
@@ -66,10 +83,14 @@ o8pm search "utility"
 # 搜索特定语言的包
 o8pm search "logger" --language old8lang
 o8pm search "requests" --language python
+o8pm search "utility" --language javascript
+o8pm search "types" --language typescript
 
 # 搜索热门包
 o8pm popular --language python
 o8pm popular --language old8lang
+o8pm popular --language javascript
+o8pm popular --language typescript
 ```
 
 ### 安装多语言包
@@ -81,9 +102,162 @@ o8pm add MyOld8LangPackage 1.0.0
 # 安装 Python 包
 o8pm add requests==2.28.2 --language python
 
+# 安装 JavaScript/TypeScript 包
+o8pm add lodash@^4.17.21 --language javascript
+o8pm add typescript@^5.0.0 --language typescript
+
 # 批量安装
 o8pm add numpy pandas --language python
 o8pm add logger utils --language old8lang
+o8pm add lodash moment --language javascript
+```
+
+## 📦 JavaScript/TypeScript 包支持
+
+### NPM 兼容 API
+
+服务器提供完整的 NPM 兼容 API，支持：
+
+- **包注册表**: `/npm/` - 注册表信息
+- **包信息**: `/npm/{package}` - 包详情
+- **包下载**: `/npm/download/{package}/-/{package}-{version}.tgz` - 文件下载
+- **包搜索**: `/npm/-/v1/search?q={query}` - 包搜索
+- **包发布**: `PUT /npm/{package}` - 发布包
+- **包删除**: `DELETE /npm/{package}/{version}` - 删除包版本
+
+### 配置 npm 使用自定义源
+
+```bash
+# 临时使用
+npm install lodash --registry https://packages.old8lang.org/npm
+
+# 永久配置
+npm config set registry https://packages.old8lang.org/npm
+
+# 使用 .npmrc 文件
+echo "registry=https://packages.old8lang.org/npm" > .npmrc
+
+# 配置特定作用域
+npm config set @old8lang:registry https://packages.old8lang.org/npm
+```
+
+### package.json 示例
+
+```json
+{
+  "name": "@old8lang/example-package",
+  "version": "1.0.0",
+  "description": "A JavaScript/TypeScript package for Old8Lang",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "module": "lib/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "types": "./lib/index.d.ts"
+    }
+  },
+  "files": [
+    "lib/",
+    "types/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "javascript",
+    "typescript",
+    "old8lang",
+    "utility"
+  ],
+  "author": "Old8Lang Team <team@old8lang.org>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/old8lang/example-package.git"
+  },
+  "homepage": "https://old8lang.org/packages/example-package",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0",
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  }
+}
+```
+
+### TypeScript 支持特性
+
+#### 类型声明文件
+- 自动包含 `.d.ts` 文件到包中
+- 支持 `types` 和 `typings` 字段
+- 兼容 TypeScript 模块解析
+
+#### 构建配置
+```json
+{
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "module": "ESNext",
+    "target": "ES2020",
+    "moduleResolution": "node"
+  }
+}
+```
+
+### 包发布流程
+
+```bash
+# 登录到自定义注册表
+npm login --registry=https://packages.old8lang.org/npm
+
+# 发布包
+npm publish --registry=https://packages.old8lang.org/npm
+
+# 发布带作用域的包
+npm publish --access public --registry=https://packages.old8lang.org/npm
+
+# 发布预发布版本
+npm publish --tag beta --registry=https://packages.old8lang.org/npm
+```
+
+### 包管理器兼容性
+
+#### npm
+```bash
+npm install lodash --registry=https://packages.old8lang.org/npm
+npm install @old8lang/example-package
+```
+
+#### yarn
+```bash
+yarn config set registry https://packages.old8lang.org/npm
+yarn add lodash
+yarn add @old8lang/example-package
+```
+
+#### pnpm
+```bash
+pnpm config set registry https://packages.old8lang.org/npm
+pnpm add lodash
+pnpm add @old8lang/example-package
 ```
 
 ## 📦 Python 包支持
@@ -406,11 +580,11 @@ O8PM_PYPI_REDIRECT_TO_PYPI=true
 
 ### 计划中的语言支持
 
-- [ ] **JavaScript/Node.js** - npm 兼容
 - [ ] **Java** - Maven 仓库兼容
 - [ ] **Go** - Go modules 兼容
 - [ ] **Rust** - Crates.io 兼容
 - [ ] **Ruby** - RubyGems 兼容
+- [ ] **PHP** - Composer 兼容
 
 ### 高级功能
 

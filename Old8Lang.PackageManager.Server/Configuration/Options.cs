@@ -18,12 +18,23 @@ public class PackageStorageOptions
     /// <summary>
     /// 允许的包文件扩展名
     /// </summary>
-    public List<string> AllowedExtensions { get; set; } = new() { ".o8pkg" };
+    public List<string> AllowedExtensions { get; set; } = new() { ".o8pkg", ".tgz", ".tar.gz" };
     
     /// <summary>
     /// 是否启用压缩
     /// </summary>
     public bool EnableCompression { get; set; } = true;
+    
+    /// <summary>
+    /// 语言特定的存储路径
+    /// </summary>
+    public Dictionary<string, string> LanguagePaths { get; set; } = new()
+    {
+        ["old8lang"] = "packages/old8lang",
+        ["python"] = "packages/python", 
+        ["javascript"] = "packages/javascript",
+        ["typescript"] = "packages/typescript"
+    };
 }
 
 /// <summary>
@@ -55,6 +66,42 @@ public class ApiOptions
     /// 速率限制 (每分钟请求数)
     /// </summary>
     public int RateLimitPerMinute { get; set; } = 100;
+    
+    /// <summary>
+    /// 支持的语言列表
+    /// </summary>
+    public List<string> SupportedLanguages { get; set; } = new() { "old8lang", "python", "javascript", "typescript" };
+    
+    /// <summary>
+    /// 默认语言
+    /// </summary>
+    public string DefaultLanguage { get; set; } = "old8lang";
+}
+
+/// <summary>
+/// NPM 注册表配置
+/// </summary>
+public class NpmRegistryOptions
+{
+    /// <summary>
+    /// 是否启用 NPM 兼容性
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+    
+    /// <summary>
+    /// NPM 注册表基础 URL
+    /// </summary>
+    public string BaseUrl { get; set; } = "https://registry.npmjs.org";
+    
+    /// <summary>
+    /// 是否重定向到官方 NPM
+    /// </summary>
+    public bool RedirectToOfficialNpm { get; set; } = false;
+    
+    /// <summary>
+    /// 支持的包格式
+    /// </summary>
+    public List<string> SupportedFormats { get; set; } = new() { ".tgz", ".tar.gz" };
 }
 
 /// <summary>
