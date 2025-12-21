@@ -1,37 +1,67 @@
 version: '3.8'
 
 services:
-  old8lang-package-manager:
+  # 数据库服务
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Old8Lang123!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - old8lang_db_data:/var/opt/mssql/data
+    networks:
+      - old8lang-network
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - old8lang-network
+
+  # 后端 API 服务
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Old8Lang.PackageManager.Server/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=database,1433;Database=Old8LangPackageManager;User Id=sa;Password=Old8Lang123!;TrustServerCertificate=true
+      - Redis__ConnectionString=redis:6379
     ports:
       - "5000:80"
-      - "5001:443"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:80;https://+:443
+    depends_on:
+      - database
+      - redis
+    networks:
+      - old8lang-network
     volumes:
-      - ./packages:/app/packages
-      - ./data:/app/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - ./uploads:/app/uploads
 
-  # 可选：添加数据库（如果使用 SQL Server/PostgreSQL）
-  # database:
-  #   image: postgres:15
-  #   environment:
-  #     POSTGRES_DB: old8lang_packages
-  #     POSTGRES_USER: old8lang
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+  # 前端 Web 服务
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - old8lang-network
 
 volumes:
-  postgres_data:
+  old8lang_db_data:
+  redis_data:
+
+networks:
+  old8lang-network:
+    driver: bridge

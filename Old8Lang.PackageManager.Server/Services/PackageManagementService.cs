@@ -23,28 +23,16 @@ public interface IPackageManagementService
 /// <summary>
 /// 包管理服务实现
 /// </summary>
-public class PackageManagementService : IPackageManagementService
+public class PackageManagementService(
+    PackageManagerDbContext dbContext,
+    IPackageStorageService storageService,
+    ILogger<PackageManagementService> logger,
+    IPythonPackageParser pythonParser)
+    : IPackageManagementService
 {
-    private readonly PackageManagerDbContext _dbContext;
-    private readonly IPackageStorageService _storageService;
-    private readonly ILogger<PackageManagementService> _logger;
-    private readonly IPythonPackageParser _pythonParser;
-    
-    public PackageManagementService(
-        PackageManagerDbContext dbContext,
-        IPackageStorageService storageService,
-        ILogger<PackageManagementService> logger,
-        IPythonPackageParser pythonParser)
-    {
-        _dbContext = dbContext;
-        _storageService = storageService;
-        _logger = logger;
-        _pythonParser = pythonParser;
-    }
-    
     public async Task<PackageEntity?> GetPackageAsync(string packageId, string version, string? language = null)
     {
-        var query = _dbContext.Packages
+        var query = dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Include(p => p.Files)
@@ -61,7 +49,7 @@ public class PackageManagementService : IPackageManagementService
     
     public async Task<List<PackageEntity>> GetAllVersionsAsync(string packageId)
     {
-        return await _dbContext.Packages
+        return await dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Where(p => p.PackageId == packageId)
@@ -71,7 +59,7 @@ public class PackageManagementService : IPackageManagementService
     
     public async Task<List<PackageEntity>> SearchPackagesAsync(string searchTerm, string? language = null, int skip = 0, int take = 20)
     {
-        var query = _dbContext.Packages
+        var query = dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Include(p => p.Files)
@@ -103,7 +91,7 @@ public class PackageManagementService : IPackageManagementService
     
     public async Task<List<PackageEntity>> GetPopularPackagesAsync(string? language = null, int take = 10)
     {
-        var query = _dbContext.Packages
+        var query = dbContext.Packages
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Include(p => p.ExternalDependencies)
@@ -142,10 +130,10 @@ public class PackageManagementService : IPackageManagementService
         packageStream.Position = 0;
         
         // 存储包文件
-        var packageFilePath = await _storageService.StorePackageAsync(packageInfo.Id, packageInfo.Version, packageStream, "application/octet-stream");
+        var packageFilePath = await storageService.StorePackageAsync(packageInfo.Id, packageInfo.Version, packageStream, "application/octet-stream");
         
         // 计算校验和
-        var checksum = await _storageService.CalculateChecksumAsync(packageFilePath);
+        var checksum = await storageService.CalculateChecksumAsync(packageFilePath);
         
         // 创建包实体
         var packageEntity = new PackageEntity
@@ -158,7 +146,7 @@ public class PackageManagementService : IPackageManagementService
             License = request.License,
             ProjectUrl = request.ProjectUrl,
             Checksum = checksum,
-            Size = await _storageService.GetPackageSizeAsync(packageInfo.Id, packageInfo.Version),
+            Size = await storageService.GetPackageSizeAsync(packageInfo.Id, packageInfo.Version),
             PublishedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             DownloadCount = 0,
@@ -225,10 +213,10 @@ public class PackageManagementService : IPackageManagementService
         });
         
         // 保存到数据库
-        _dbContext.Packages.Add(packageEntity);
-        await _dbContext.SaveChangesAsync();
+        dbContext.Packages.Add(packageEntity);
+        await dbContext.SaveChangesAsync();
         
-        _logger.LogInformation("包上传成功: {PackageId} {Version}", packageInfo.Id, packageInfo.Version);
+        logger.LogInformation("包上传成功: {PackageId} {Version}", packageInfo.Id, packageInfo.Version);
         
         return packageEntity;
     }
@@ -242,13 +230,13 @@ public class PackageManagementService : IPackageManagementService
         }
         
         // 删除存储的包文件
-        await _storageService.DeletePackageAsync(packageId, version);
+        await storageService.DeletePackageAsync(packageId, version);
         
         // 删除数据库记录
-        _dbContext.Packages.Remove(package);
-        await _dbContext.SaveChangesAsync();
+        dbContext.Packages.Remove(package);
+        await dbContext.SaveChangesAsync();
         
-        _logger.LogInformation("包删除成功: {PackageId} {Version}", packageId, version);
+        logger.LogInformation("包删除成功: {PackageId} {Version}", packageId, version);
         return true;
     }
     
@@ -261,14 +249,14 @@ public class PackageManagementService : IPackageManagementService
         }
         
         package.DownloadCount++;
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         
         return true;
     }
     
     public async Task<bool> PackageExistsAsync(string packageId, string version, string? language = null)
     {
-        var query = _dbContext.Packages
+        var query = dbContext.Packages
             .Where(p => p.PackageId == packageId && p.Version == version);
             
         if (!string.IsNullOrEmpty(language))
@@ -293,13 +281,13 @@ public class PackageManagementService : IPackageManagementService
                 case "python":
                     return await ExtractPythonPackageInfoAsync(packageStream, fileName);
                 default:
-                    _logger.LogWarning("不支持的包格式: {FileName}", fileName);
+                    logger.LogWarning("不支持的包格式: {FileName}", fileName);
                     return null;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析包信息失败: {FileName}", fileName);
+            logger.LogError(ex, "解析包信息失败: {FileName}", fileName);
             return null;
         }
     }
@@ -328,7 +316,7 @@ public class PackageManagementService : IPackageManagementService
     
     private async Task<Package?> ExtractPythonPackageInfoAsync(Stream packageStream, string fileName)
     {
-        var pythonInfo = await _pythonParser.ParsePackageAsync(packageStream, fileName);
+        var pythonInfo = await pythonParser.ParsePackageAsync(packageStream, fileName);
         
         if (pythonInfo == null)
             return null;

@@ -18,18 +18,11 @@ public interface IJavaScriptPackageParser
 /// <summary>
 /// JavaScript/TypeScript 包解析服务实现
 /// </summary>
-public class JavaScriptPackageParser : IJavaScriptPackageParser
+public class JavaScriptPackageParser(ILogger<JavaScriptPackageParser> logger) : IJavaScriptPackageParser
 {
-    private readonly ILogger<JavaScriptPackageParser> _logger;
-    
     // NPM 版本正则表达式
     private static readonly Regex NpmVersionRegex = new(@"^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$", RegexOptions.Compiled);
-    
-    public JavaScriptPackageParser(ILogger<JavaScriptPackageParser> logger)
-    {
-        _logger = logger;
-    }
-    
+
     public async Task<JavaScriptPackageInfo?> ParsePackageAsync(Stream packageStream, string fileName)
     {
         try
@@ -37,7 +30,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
             // JS/TS 包通常是 .tgz 格式 (tarball)
             if (!IsJavaScriptPackage(fileName))
             {
-                _logger.LogWarning("文件不是有效的 JavaScript/TypeScript 包: {FileName}", fileName);
+                logger.LogWarning("文件不是有效的 JavaScript/TypeScript 包: {FileName}", fileName);
                 return null;
             }
             
@@ -49,7 +42,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
             }
             else
             {
-                _logger.LogWarning("不支持的 JavaScript/TypeScript 包格式: {FileName}", fileName);
+                logger.LogWarning("不支持的 JavaScript/TypeScript 包格式: {FileName}", fileName);
                 return null;
             }
             
@@ -57,7 +50,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析 JavaScript/TypeScript 包失败: {FileName}", fileName);
+            logger.LogError(ex, "解析 JavaScript/TypeScript 包失败: {FileName}", fileName);
             return null;
         }
     }
@@ -134,7 +127,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析 package.json 失败");
+            logger.LogError(ex, "解析 package.json 失败");
             return dependencies;
         }
     }
@@ -156,7 +149,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证 JavaScript/TypeScript 包失败");
+            logger.LogError(ex, "验证 JavaScript/TypeScript 包失败");
             return false;
         }
     }
@@ -261,7 +254,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "无法提取 tarball 文件的元数据，使用文件名解析");
+            logger.LogWarning(ex, "无法提取 tarball 文件的元数据，使用文件名解析");
         }
         
         return packageInfo;
@@ -295,7 +288,7 @@ public class JavaScriptPackageParser : IJavaScriptPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "提取 package.json 元数据失败");
+            logger.LogError(ex, "提取 package.json 元数据失败");
             return Task.FromResult<PackageJsonDocument?>(null);
         }
     }

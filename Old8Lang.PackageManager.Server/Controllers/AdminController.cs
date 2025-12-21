@@ -12,22 +12,14 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Authorize] // 如果需要身份验证
-public class ApiKeysController : ControllerBase
+public class ApiKeysController(
+    IApiKeyService apiKeyService,
+    ApiOptions apiOptions,
+    ILogger<ApiKeysController> logger)
+    : ControllerBase
 {
-    private readonly IApiKeyService _apiKeyService;
-    private readonly ApiOptions _apiOptions;
-    private readonly ILogger<ApiKeysController> _logger;
-    
-    public ApiKeysController(
-        IApiKeyService apiKeyService,
-        ApiOptions apiOptions,
-        ILogger<ApiKeysController> logger)
-    {
-        _apiKeyService = apiKeyService;
-        _apiOptions = apiOptions;
-        _logger = logger;
-    }
-    
+    private readonly ApiOptions _apiOptions = apiOptions;
+
     /// <summary>
     /// 获取所有 API 密钥
     /// </summary>
@@ -36,7 +28,7 @@ public class ApiKeysController : ControllerBase
     {
         try
         {
-            var apiKeys = await _apiKeyService.GetAllApiKeysAsync();
+            var apiKeys = await apiKeyService.GetAllApiKeysAsync();
             // 返回时不显示完整的密钥
             var safeApiKeys = apiKeys.Select(k => new ApiKeyEntity
             {
@@ -50,16 +42,16 @@ public class ApiKeysController : ControllerBase
                 UsageCount = k.UsageCount,
                 Key = k.Key.Substring(0, Math.Min(8, k.Key.Length)) + "..." // 只显示前8位
             }).ToList();
-            
+
             return Ok(safeApiKeys);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取 API 密钥列表失败");
+            logger.LogError(ex, "获取 API 密钥列表失败");
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取 API 密钥列表失败"));
         }
     }
-    
+
     /// <summary>
     /// 创建新的 API 密钥
     /// </summary>
@@ -73,27 +65,27 @@ public class ApiKeysController : ControllerBase
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("名称不能为空"));
             }
-            
+
             var expiresAt = request.ExpiresAt ?? DateTime.UtcNow.AddYears(1);
             if (expiresAt <= DateTime.UtcNow)
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("过期时间必须在未来"));
             }
-            
+
             var scopes = string.IsNullOrWhiteSpace(request.Scopes) ? "package:read,package:write" : request.Scopes;
-            
-            var apiKey = await _apiKeyService.CreateApiKeyAsync(request.Name, request.Description, scopes, expiresAt);
-            
+
+            var apiKey = await apiKeyService.CreateApiKeyAsync(request.Name, request.Description, scopes, expiresAt);
+
             // 创建时返回完整的密钥
             return CreatedAtAction(nameof(GetAllApiKeys), new { id = apiKey.Id }, apiKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "创建 API 密钥失败: {Name}", request.Name);
+            logger.LogError(ex, "创建 API 密钥失败: {Name}", request.Name);
             return StatusCode(500, ApiResponse<object>.ErrorResult("创建 API 密钥失败"));
         }
     }
-    
+
     /// <summary>
     /// 撤销 API 密钥
     /// </summary>
@@ -103,21 +95,21 @@ public class ApiKeysController : ControllerBase
     {
         try
         {
-            var result = await _apiKeyService.RevokeApiKeyAsync(id);
+            var result = await apiKeyService.RevokeApiKeyAsync(id);
             if (!result)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("API 密钥不存在", "API_KEY_NOT_FOUND"));
             }
-            
+
             return Ok(ApiResponse<object>.SuccessResult(null, "API 密钥已撤销"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "撤销 API 密钥失败: {KeyId}", id);
+            logger.LogError(ex, "撤销 API 密钥失败: {KeyId}", id);
             return StatusCode(500, ApiResponse<object>.ErrorResult("撤销 API 密钥失败"));
         }
     }
-    
+
     /// <summary>
     /// 验证 API 密钥
     /// </summary>
@@ -132,8 +124,8 @@ public class ApiKeysController : ControllerBase
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("API 密钥不能为空"));
             }
-            
-            var keyEntity = await _apiKeyService.ValidateApiKeyAsync(request.ApiKey);
+
+            var keyEntity = await apiKeyService.ValidateApiKeyAsync(request.ApiKey);
             if (keyEntity == null)
             {
                 return Ok(new ValidateApiKeyResponse
@@ -142,7 +134,7 @@ public class ApiKeysController : ControllerBase
                     Message = "无效的 API 密钥"
                 });
             }
-            
+
             return Ok(new ValidateApiKeyResponse
             {
                 IsValid = true,
@@ -155,7 +147,7 @@ public class ApiKeysController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证 API 密钥失败");
+            logger.LogError(ex, "验证 API 密钥失败");
             return StatusCode(500, ApiResponse<object>.ErrorResult("验证 API 密钥失败"));
         }
     }
@@ -171,7 +163,7 @@ public class StatisticsController : ControllerBase
     private readonly IPackageManagementService _packageService;
     private readonly IApiKeyService _apiKeyService;
     private readonly ILogger<StatisticsController> _logger;
-    
+
     public StatisticsController(
         IPackageManagementService packageService,
         IApiKeyService apiKeyService,
@@ -181,7 +173,7 @@ public class StatisticsController : ControllerBase
         _apiKeyService = apiKeyService;
         _logger = logger;
     }
-    
+
     /// <summary>
     /// 获取服务统计信息
     /// </summary>
@@ -201,7 +193,7 @@ public class StatisticsController : ControllerBase
                 Uptime = TimeSpan.FromHours(24), // 示例值
                 LastUpdated = DateTime.UtcNow
             };
-            
+
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -210,7 +202,7 @@ public class StatisticsController : ControllerBase
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取统计信息失败"));
         }
     }
-    
+
     /// <summary>
     /// 获取包下载趋势
     /// </summary>
@@ -223,7 +215,7 @@ public class StatisticsController : ControllerBase
             // 这里应该实现实际的下载趋势统计
             var trendData = new List<DownloadTrendData>();
             var now = DateTime.UtcNow;
-            
+
             for (int i = days - 1; i >= 0; i--)
             {
                 var date = now.AddDays(-i).Date;
@@ -233,7 +225,7 @@ public class StatisticsController : ControllerBase
                     Downloads = Random.Shared.Next(10, 1000) // 示例数据
                 });
             }
-            
+
             return Ok(trendData);
         }
         catch (Exception ex)

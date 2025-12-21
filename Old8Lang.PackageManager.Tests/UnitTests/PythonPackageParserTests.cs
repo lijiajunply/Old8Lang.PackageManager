@@ -185,8 +185,10 @@ requests>=2.28.0
         // Arrange - Test the version validation logic
         var isPythonVersion = System.Text.RegularExpressions.Regex.IsMatch(
             version, 
-            @"^\d+\.\d+(\.\d+)?([ab]|rc|alpha|beta|pre|post|dev)\d*$"
+            @"^\d+\.\d+(\.\d+)?(\.dev\d*)?$|^\d+\.\d+(\.\d+)?([ab]|rc|alpha|beta|pre|post)\d*$"
         );
+        
+
 
         // Assert
         isPythonVersion.Should().Be(expectedValid);

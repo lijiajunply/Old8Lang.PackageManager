@@ -10,25 +10,13 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("npm")]
-public class NpmController : ControllerBase
+public class NpmController(
+    IPackageManagementService packageService,
+    IPackageStorageService storageService,
+    IJavaScriptPackageParser jsParser,
+    ILogger<NpmController> logger)
+    : ControllerBase
 {
-    private readonly IPackageManagementService _packageService;
-    private readonly IPackageStorageService _storageService;
-    private readonly IJavaScriptPackageParser _jsParser;
-    private readonly ILogger<NpmController> _logger;
-    
-    public NpmController(
-        IPackageManagementService packageService,
-        IPackageStorageService storageService,
-        IJavaScriptPackageParser jsParser,
-        ILogger<NpmController> logger)
-    {
-        _packageService = packageService;
-        _storageService = storageService;
-        _jsParser = jsParser;
-        _logger = logger;
-    }
-    
     /// <summary>
     /// NPM 注册表根端点
     /// </summary>
@@ -45,16 +33,16 @@ public class NpmController : ControllerBase
                 maintainers = new[] { new { name = "Old8Lang Team", email = "team@old8lang.org" } },
                 readme = "Welcome to Old8Lang NPM Registry"
             };
-            
+
             return Ok(registryInfo);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取注册表信息失败");
+            logger.LogError(ex, "获取注册表信息失败");
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     /// <summary>
     /// 获取包信息 (NPM 兼容)
     /// </summary>
@@ -67,10 +55,10 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "Package name is required" });
             }
-            
+
             // 解码包名
             packageName = Uri.UnescapeDataString(packageName);
-            
+
             // 从路径中提取包名 (可能是 scope 包)
             var parts = packageName.Split('/');
             if (parts.Length >= 2 && parts[0].StartsWith("@"))
@@ -81,18 +69,18 @@ public class NpmController : ControllerBase
             {
                 packageName = parts[^1];
             }
-            
+
             // 查询包信息 - 获取最新版本
-            var packages = await _packageService.GetAllVersionsAsync(packageName);
+            var packages = await packageService.GetAllVersionsAsync(packageName);
             var package = packages.FirstOrDefault(p => p.Language == "javascript");
             if (package == null)
             {
                 return NotFound(new { error = "Package not found" });
             }
-            
+
             // 获取包的标签和依赖
             package.Tags = package.PackageTags.Select(t => t.Tag).ToList();
-            
+
             // 转换为 NPM 格式响应
             var npmResponse = new
             {
@@ -111,13 +99,17 @@ public class NpmController : ControllerBase
                         main = GetLanguageMetadataValue(package, "main", "index.js"),
                         types = GetLanguageMetadataValue(package, "types", ""),
                         module = GetLanguageMetadataValue(package, "module", ""),
-                        files = GetLanguageMetadataValue(package, "files", "").Split(',', StringSplitOptions.RemoveEmptyEntries),
+                        files = GetLanguageMetadataValue(package, "files", "")
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries),
                         engines = ParseEngines(GetLanguageMetadataValue(package, "engines", "")),
-                        dependencies = ParseExternalDependencies(package.ExternalDependencies.Where(d => !d.IsDevDependency)),
-                        devDependencies = ParseExternalDependencies(package.ExternalDependencies.Where(d => d.IsDevDependency)),
+                        dependencies =
+                            ParseExternalDependencies(package.ExternalDependencies.Where(d => !d.IsDevDependency)),
+                        devDependencies =
+                            ParseExternalDependencies(package.ExternalDependencies.Where(d => d.IsDevDependency)),
                         dist = new
                         {
-                            tarball = $"{Request.Scheme}://{Request.Host}/npm/download/{package.PackageId}/-/{package.PackageId}-{package.Version}.tgz",
+                            tarball =
+                                $"{Request.Scheme}://{Request.Host}/npm/download/{package.PackageId}/-/{package.PackageId}-{package.Version}.tgz",
                             shasum = package.Checksum,
                             integrity = $"sha512-{package.Checksum}"
                         }
@@ -141,16 +133,16 @@ public class NpmController : ControllerBase
                 distTags = new { latest = package.Version },
                 downloads = new { lastWeek = package.DownloadCount }
             };
-            
+
             return Ok(npmResponse);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取包信息失败: {PackageName}", packageName);
+            logger.LogError(ex, "获取包信息失败: {PackageName}", packageName);
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     /// <summary>
     /// 下载包文件 (NPM 兼容)
     /// </summary>
@@ -163,45 +155,47 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "Package name and file name are required" });
             }
-            
+
             // 从文件名解析版本
             var version = ExtractVersionFromFileName(fileName);
             if (string.IsNullOrEmpty(version))
             {
                 return BadRequest(new { error = "Invalid file name format" });
             }
-            
-            var package = await _packageService.GetPackageAsync(packageName, version, "javascript");
+
+            var package = await packageService.GetPackageAsync(packageName, version, "javascript");
             if (package == null)
             {
                 return NotFound(new { error = "Package not found" });
             }
-            
-            var packageStream = await _storageService.GetPackageAsync(package.PackageId, package.Version);
+
+            var packageStream = await storageService.GetPackageAsync(package.PackageId, package.Version);
             if (packageStream == null)
             {
                 return NotFound(new { error = "Package file not found" });
             }
-            
+
             return File(packageStream, "application/gzip", fileName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "下载包失败: {PackageName}/{FileName}", packageName, fileName);
+            logger.LogError(ex, "下载包失败: {PackageName}/{FileName}", packageName, fileName);
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     /// <summary>
     /// 搜索包 (NPM 兼容)
     /// </summary>
     [HttpGet("-/v1/search")]
-    public async Task<IActionResult> SearchPackages([FromQuery] string text = "", [FromQuery] int from = 0, [FromQuery] int size = 20, [FromQuery] string quality = "0.65", [FromQuery] string popularity = "0.98", [FromQuery] string maintenance = "0.5")
+    public async Task<IActionResult> SearchPackages([FromQuery] string text = "", [FromQuery] int from = 0,
+        [FromQuery] int size = 20, [FromQuery] string quality = "0.65", [FromQuery] string popularity = "0.98",
+        [FromQuery] string maintenance = "0.5")
     {
         try
         {
-            var searchResult = await _packageService.SearchPackagesAsync(text, "javascript", from, size);
-            
+            var searchResult = await packageService.SearchPackagesAsync(text, "javascript", from, size);
+
             var npmSearchResponse = new
             {
                 objects = searchResult.Select(pkg => new
@@ -250,16 +244,16 @@ public class NpmController : ControllerBase
                 total = searchResult.Count,
                 time = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             };
-            
+
             return Ok(npmSearchResponse);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "搜索包失败: {Text}", text);
+            logger.LogError(ex, "搜索包失败: {Text}", text);
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     /// <summary>
     /// 发布包 (NPM 兼容)
     /// </summary>
@@ -272,27 +266,27 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "Package name is required" });
             }
-            
+
             // 解码包名
             packageName = Uri.UnescapeDataString(packageName);
-            
+
             // 验证权限 (简化实现)
             if (!await ValidatePublishPermissionAsync(packageName))
             {
                 return Unauthorized(new { error = "Unauthorized to publish this package" });
             }
-            
+
             // 这里应该从请求中提取 tarball 文件并解析
             // 简化实现，返回成功响应
             return Ok(new { success = true, id = $"{packageName}@{request?.Version ?? "1.0.0"}" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "发布包失败: {PackageName}", packageName);
+            logger.LogError(ex, "发布包失败: {PackageName}", packageName);
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     /// <summary>
     /// 解析 package.json 文件
     /// </summary>
@@ -305,10 +299,10 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "package.json file is required" });
             }
-            
+
             using var stream = packageJsonFile.OpenReadStream();
-            var dependencies = await _jsParser.ParsePackageJsonAsync(stream);
-            
+            var dependencies = await jsParser.ParsePackageJsonAsync(stream);
+
             return Ok(new ApiResponse<List<ExternalDependencyInfo>>
             {
                 Success = true,
@@ -318,7 +312,7 @@ public class NpmController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析 package.json 失败");
+            logger.LogError(ex, "解析 package.json 失败");
             return StatusCode(500, new ApiResponse<object>
             {
                 Success = false,
@@ -327,7 +321,7 @@ public class NpmController : ControllerBase
             });
         }
     }
-    
+
     /// <summary>
     /// 验证 JS/TS 包
     /// </summary>
@@ -340,10 +334,10 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "Package file is required" });
             }
-            
+
             using var stream = packageFile.OpenReadStream();
-            var isValid = await _jsParser.ValidateJavaScriptPackageAsync(stream);
-            
+            var isValid = await jsParser.ValidateJavaScriptPackageAsync(stream);
+
             return Ok(new ApiResponse<bool>
             {
                 Success = true,
@@ -353,7 +347,7 @@ public class NpmController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证包失败: {FileName}", packageFile?.FileName);
+            logger.LogError(ex, "验证包失败: {FileName}", packageFile?.FileName);
             return StatusCode(500, new ApiResponse<object>
             {
                 Success = false,
@@ -362,7 +356,7 @@ public class NpmController : ControllerBase
             });
         }
     }
-    
+
     /// <summary>
     /// 删除包版本 (NPM 兼容)
     /// </summary>
@@ -375,32 +369,32 @@ public class NpmController : ControllerBase
             {
                 return BadRequest(new { error = "Package name and version are required" });
             }
-            
+
             // 解码包名
             packageName = Uri.UnescapeDataString(packageName);
-            
+
             // 验证权限
             if (!await ValidatePublishPermissionAsync(packageName))
             {
                 return Unauthorized(new { error = "Unauthorized to unpublish this package" });
             }
-            
+
             // 删除包版本
-            var success = await _packageService.DeletePackageAsync(packageName, version);
+            var success = await packageService.DeletePackageAsync(packageName, version);
             if (success)
             {
                 return Ok(new { success = true });
             }
-            
+
             return NotFound(new { error = "Package version not found" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "删除包版本失败: {PackageName}@{Version}", packageName, version);
+            logger.LogError(ex, "删除包版本失败: {PackageName}@{Version}", packageName, version);
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
-    
+
     private string GetLanguageMetadataValue(PackageEntity package, string key, string defaultValue = "")
     {
         var metadata = package.LanguageMetadata.FirstOrDefault(m => m.Language == "javascript");
@@ -419,16 +413,17 @@ public class NpmController : ControllerBase
                 // 忽略解析错误
             }
         }
+
         return defaultValue;
     }
-    
+
     private Dictionary<string, string> ParseEngines(string enginesJson)
     {
         try
         {
             if (string.IsNullOrEmpty(enginesJson))
                 return new Dictionary<string, string>();
-            
+
             var engines = JsonSerializer.Deserialize<Dictionary<string, string>>(enginesJson);
             return engines ?? new Dictionary<string, string>();
         }
@@ -437,12 +432,12 @@ public class NpmController : ControllerBase
             return new Dictionary<string, string>();
         }
     }
-    
+
     private Dictionary<string, string> ParseExternalDependencies(IEnumerable<ExternalDependencyEntity> dependencies)
     {
         return dependencies.ToDictionary(d => d.PackageName, d => d.VersionSpec);
     }
-    
+
     private string GetScope(string packageName)
     {
         if (packageName.StartsWith("@"))
@@ -453,16 +448,17 @@ public class NpmController : ControllerBase
                 return parts[0];
             }
         }
+
         return null;
     }
-    
+
     private string ExtractVersionFromFileName(string fileName)
     {
         // 从 {package}-{version}.tgz 格式中提取版本
         var match = System.Text.RegularExpressions.Regex.Match(fileName, @"-(\d+\.\d+\.\d+.*)\.tgz$");
         return match.Success ? match.Groups[1].Value : "";
     }
-    
+
     private Task<bool> ValidatePublishPermissionAsync(string packageName)
     {
         // 简化实现：实际应该验证用户权限

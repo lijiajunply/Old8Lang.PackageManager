@@ -28,12 +28,12 @@ public class Package
     /// <summary>
     /// 包标签
     /// </summary>
-    public List<string> Tags { get; set; } = new();
+    public List<string> Tags { get; set; } = [];
     
     /// <summary>
     /// 依赖包列表
     /// </summary>
-    public List<PackageDependency> Dependencies { get; set; } = new();
+    public List<PackageDependency> Dependencies { get; set; } = [];
     
     /// <summary>
     /// 包文件路径

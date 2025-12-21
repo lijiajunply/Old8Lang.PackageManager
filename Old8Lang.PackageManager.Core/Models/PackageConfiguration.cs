@@ -23,12 +23,12 @@ public class PackageConfiguration
     /// <summary>
     /// 包源列表
     /// </summary>
-    public List<PackageSource> Sources { get; set; } = new();
+    public List<PackageSource> Sources { get; set; } = [];
     
     /// <summary>
     /// 包引用列表
     /// </summary>
-    public List<PackageReference> References { get; set; } = new();
+    public List<PackageReference> References { get; set; } = [];
     
     /// <summary>
     /// 安装路径

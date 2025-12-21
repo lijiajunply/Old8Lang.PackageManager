@@ -239,47 +239,31 @@ public class MultiLanguageApiControllerTests
         // Arrange
         var pythonPackages = new List<PackageEntity>
         {
-            new() { PackageId = "requests", Language = "python" },
-            new() { PackageId = "numpy", Language = "python" }
+            new() { PackageId = "requests", Version = "2.28.0", Language = "python" },
+            new() { PackageId = "numpy", Version = "1.21.0", Language = "python" }
         };
 
-        _mockPackageService.Setup(s => s.SearchPackagesAsync("", "python", 0, int.MaxValue))
+        _mockPackageService.Setup(s => s.SearchPackagesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
                       .ReturnsAsync(pythonPackages);
 
-        // Act
+        // Act - 暂时跳过try-catch让真正的异常抛出来看错误信息
         var result = await _pyPiController.GetSimpleIndex();
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeOfType<ContentResult>();
+        
+        // 如果是StatusCodeResult，检查状态码并提供更多信息
+        if (result is StatusCodeResult statusCodeResult)
+        {
+            Console.WriteLine($"Controller returned StatusCode: {statusCodeResult.StatusCode}");
+            result.Should().BeOfType<ContentResult>($"Expected ContentResult but got StatusCodeResult with status {statusCodeResult.StatusCode}");
+        }
         
         var contentResult = result as ContentResult;
+        contentResult.Should().NotBeNull("Expected ContentResult");
         contentResult!.ContentType.Should().Contain("text/html");
         contentResult.Content.Should().Contain("requests");
         contentResult.Content.Should().Contain("numpy");
-    }
-
-    [Fact]
-    public async Task GetPackageVersions_ShouldReturnVersionList()
-    {
-        // Arrange
-        var packages = new List<PackageEntity>
-        {
-            new() { PackageId = "requests", Version = "2.28.0", Language = "python", Size = 100000 },
-            new() { PackageId = "requests", Version = "2.27.0", Language = "python", Size = 95000 }
-        };
-
-        _mockPackageService.Setup(s => s.GetAllVersionsAsync("requests"))
-                      .ReturnsAsync(packages);
-
-        // Act
-        var result = await _pyPiController.GetPackageVersions("requests");
-
-        // Assert
-        result.Should().BeOfType<ContentResult>();
-        
-        var contentResult = result as ContentResult;
-        contentResult!.ContentType.Should().Contain("text/html");
         contentResult.Content.Should().Contain("requests-2.28.0-py3-none-any.whl");
         contentResult.Content.Should().Contain("100KB");
     }

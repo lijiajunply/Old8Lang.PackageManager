@@ -12,13 +12,13 @@ public class PackageManagerDbContext : DbContext
     {
     }
     
-    public DbSet<PackageEntity> Packages { get; set; }
-    public DbSet<PackageTagEntity> PackageTags { get; set; }
-    public DbSet<PackageDependencyEntity> PackageDependencies { get; set; }
-    public DbSet<PackageFileEntity> PackageFiles { get; set; }
-    public DbSet<ApiKeyEntity> ApiKeys { get; set; }
-    public DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; }
-    public DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; }
+    public virtual DbSet<PackageEntity> Packages { get; set; }
+    public virtual DbSet<PackageTagEntity> PackageTags { get; set; }
+    public virtual DbSet<PackageDependencyEntity> PackageDependencies { get; set; }
+    public virtual DbSet<PackageFileEntity> PackageFiles { get; set; }
+    public virtual DbSet<ApiKeyEntity> ApiKeys { get; set; }
+    public virtual DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; }
+    public virtual DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

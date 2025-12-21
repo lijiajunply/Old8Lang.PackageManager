@@ -19,30 +19,22 @@ public interface IPackageSignatureService
 /// <summary>
 /// 包签名验证服务实现
 /// </summary>
-public class PackageSignatureService : IPackageSignatureService
+public class PackageSignatureService(SecurityOptions securityOptions, ILogger<PackageSignatureService> logger)
+    : IPackageSignatureService
 {
-    private readonly SecurityOptions _securityOptions;
-    private readonly ILogger<PackageSignatureService> _logger;
-    
-    public PackageSignatureService(SecurityOptions securityOptions, ILogger<PackageSignatureService> logger)
-    {
-        _securityOptions = securityOptions;
-        _logger = logger;
-    }
-    
     public async Task<bool> VerifyPackageSignatureAsync(string packagePath, string? expectedSignature = null)
     {
         try
         {
-            if (!_securityOptions.EnablePackageSigning)
+            if (!securityOptions.EnablePackageSigning)
             {
-                _logger.LogDebug("包签名验证已禁用，跳过验证: {PackagePath}", packagePath);
+                logger.LogDebug("包签名验证已禁用，跳过验证: {PackagePath}", packagePath);
                 return true;
             }
             
             if (!File.Exists(packagePath))
             {
-                _logger.LogError("包文件不存在: {PackagePath}", packagePath);
+                logger.LogError("包文件不存在: {PackagePath}", packagePath);
                 return false;
             }
             
@@ -63,12 +55,12 @@ public class PackageSignatureService : IPackageSignatureService
                 return VerifySignature(hash, storedSignature);
             }
             
-            _logger.LogWarning("未找到包签名: {PackagePath}", packagePath);
+            logger.LogWarning("未找到包签名: {PackagePath}", packagePath);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证包签名失败: {PackagePath}", packagePath);
+            logger.LogError(ex, "验证包签名失败: {PackagePath}", packagePath);
             return false;
         }
     }
@@ -107,7 +99,7 @@ public class PackageSignatureService : IPackageSignatureService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "生成包签名失败: {PackagePath}", packagePath);
+            logger.LogError(ex, "生成包签名失败: {PackagePath}", packagePath);
             throw;
         }
     }
@@ -119,19 +111,19 @@ public class PackageSignatureService : IPackageSignatureService
             // 检查证书是否过期
             if (certificate.NotAfter < DateTime.UtcNow)
             {
-                _logger.LogWarning("证书已过期: {Thumbprint}", certificate.Thumbprint);
+                logger.LogWarning("证书已过期: {Thumbprint}", certificate.Thumbprint);
                 return false;
             }
             
             // 检查证书是否在信任列表中
-            if (_securityOptions.TrustedCertificates.Any())
+            if (securityOptions.TrustedCertificates.Any())
             {
                 var thumbprint = certificate.Thumbprint?.ToUpperInvariant();
-                var isTrusted = _securityOptions.TrustedCertificates.Contains(thumbprint);
+                var isTrusted = securityOptions.TrustedCertificates.Contains(thumbprint);
                 
                 if (!isTrusted)
                 {
-                    _logger.LogWarning("证书不在信任列表中: {Thumbprint}", thumbprint);
+                    logger.LogWarning("证书不在信任列表中: {Thumbprint}", thumbprint);
                     return false;
                 }
             }
@@ -146,7 +138,7 @@ public class PackageSignatureService : IPackageSignatureService
             if (!isValid)
             {
                 var errors = chain.ChainStatus.Select(status => status.StatusInformation);
-                _logger.LogWarning("证书验证失败: {Thumbprint}, 错误: {Errors}", 
+                logger.LogWarning("证书验证失败: {Thumbprint}, 错误: {Errors}", 
                     certificate.Thumbprint, string.Join(", ", errors));
             }
             
@@ -154,19 +146,19 @@ public class PackageSignatureService : IPackageSignatureService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证证书失败: {Thumbprint}", certificate.Thumbprint);
+            logger.LogError(ex, "验证证书失败: {Thumbprint}", certificate.Thumbprint);
             return false;
         }
     }
     
     public async Task<List<string>> GetTrustedCertificatesAsync()
     {
-        return await Task.FromResult(_securityOptions.TrustedCertificates.ToList());
+        return await Task.FromResult(securityOptions.TrustedCertificates.ToList());
     }
     
     private async Task<byte[]> ComputePackageHashAsync(string packagePath)
     {
-        var algorithm = _securityOptions.AllowedHashAlgorithms.FirstOrDefault() ?? "SHA256";
+        var algorithm = securityOptions.AllowedHashAlgorithms.FirstOrDefault() ?? "SHA256";
         
         await using var stream = File.OpenRead(packagePath);
         
@@ -191,7 +183,7 @@ public class PackageSignatureService : IPackageSignatureService
             }
             
             // 检查签名是否包含哈希信息
-            if (_securityOptions.EnableChecksumValidation)
+            if (securityOptions.EnableChecksumValidation)
             {
                 var signatureString = Encoding.UTF8.GetString(signatureBytes);
                 if (signatureString.Contains(':'))
@@ -209,7 +201,7 @@ public class PackageSignatureService : IPackageSignatureService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证签名失败");
+            logger.LogError(ex, "验证签名失败");
             return false;
         }
     }

@@ -18,18 +18,11 @@ public interface IPythonPackageParser
 /// <summary>
 /// Python 包解析服务实现
 /// </summary>
-public class PythonPackageParser : IPythonPackageParser
+public class PythonPackageParser(ILogger<PythonPackageParser> logger) : IPythonPackageParser
 {
-    private readonly ILogger<PythonPackageParser> _logger;
-    
     // Python 版本正则表达式
     private static readonly Regex PythonVersionRegex = new(@"^\d+\.\d+(\.\d+)?([ab]|rc|alpha|beta|pre|post|dev)\d*$", RegexOptions.Compiled);
-    
-    public PythonPackageParser(ILogger<PythonPackageParser> logger)
-    {
-        _logger = logger;
-    }
-    
+
     public async Task<PythonPackageInfo?> ParsePackageAsync(Stream packageStream, string fileName)
     {
         try
@@ -37,7 +30,7 @@ public class PythonPackageParser : IPythonPackageParser
             // Python 包通常是 .whl (wheel) 或 .tar.gz 格式
             if (!IsPythonPackage(fileName))
             {
-                _logger.LogWarning("文件不是有效的 Python 包: {FileName}", fileName);
+                logger.LogWarning("文件不是有效的 Python 包: {FileName}", fileName);
                 return null;
             }
             
@@ -53,7 +46,7 @@ public class PythonPackageParser : IPythonPackageParser
             }
             else
             {
-                _logger.LogWarning("不支持的 Python 包格式: {FileName}", fileName);
+                logger.LogWarning("不支持的 Python 包格式: {FileName}", fileName);
                 return null;
             }
             
@@ -61,7 +54,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析 Python 包失败: {FileName}", fileName);
+            logger.LogError(ex, "解析 Python 包失败: {FileName}", fileName);
             return null;
         }
     }
@@ -100,7 +93,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "解析 requirements.txt 失败");
+            logger.LogError(ex, "解析 requirements.txt 失败");
             return dependencies;
         }
     }
@@ -123,7 +116,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证 Python 包失败");
+            logger.LogError(ex, "验证 Python 包失败");
             return false;
         }
     }
@@ -147,10 +140,31 @@ public class PythonPackageParser : IPythonPackageParser
         var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
         var parts = fileNameWithoutExt.Split('-');
         
-        if (parts.Length >= 2)
+        if (parts.Length >= 4) // 至少需要: 包名, 版本, python-tag, abi-tag, platform-tag
         {
-            packageInfo.PackageId = parts[0].Replace('_', '-'); // 包名中 _ 替换为 -
-            packageInfo.Version = parts[1];
+            // 从版本部分开始，找到最后一个看起来像版本的部分
+            // 版本通常遵循 semantic versioning 格式
+            var versionPart = -1;
+            for (int i = parts.Length - 4; i >= 1; i--) // 从倒数第4个开始向前找版本
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(parts[i], @"^\d+\.\d+(\.\d+)?(([ab]|rc|alpha|beta|pre|post|dev)\d*)?$"))
+                {
+                    versionPart = i;
+                    break;
+                }
+            }
+            
+            if (versionPart > 0)
+            {
+                packageInfo.Version = parts[versionPart];
+                packageInfo.PackageId = string.Join("-", parts.Take(versionPart)).Replace('_', '-');
+            }
+            else
+            {
+                // 如果找不到版本格式，假设倒数第3个是版本
+                packageInfo.Version = parts[parts.Length - 4];
+                packageInfo.PackageId = string.Join("-", parts.Take(parts.Length - 4)).Replace('_', '-');
+            }
         }
         
         // 尝试从包内的 METADATA 文件读取详细信息
@@ -184,7 +198,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "无法提取 wheel 文件的元数据，使用文件名解析");
+            logger.LogWarning(ex, "无法提取 wheel 文件的元数据，使用文件名解析");
         }
         
         return packageInfo;
@@ -209,7 +223,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "提取 wheel 元数据失败");
+            logger.LogError(ex, "提取 wheel 元数据失败");
             return null;
         }
     }
@@ -263,7 +277,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "无法提取源码包的元数据");
+            logger.LogWarning(ex, "无法提取源码包的元数据");
         }
         
         return packageInfo;
@@ -288,7 +302,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "提取源码包元数据失败");
+            logger.LogError(ex, "提取源码包元数据失败");
             return null;
         }
     }
@@ -337,7 +351,7 @@ public class PythonPackageParser : IPythonPackageParser
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "解析依赖行失败: {Line}", line);
+            logger.LogWarning(ex, "解析依赖行失败: {Line}", line);
             return null;
         }
     }

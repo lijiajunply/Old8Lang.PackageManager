@@ -19,12 +19,12 @@ public interface ICommand
     /// 命令名称
     /// </summary>
     string Name { get; }
-    
+
     /// <summary>
     /// 命令描述
     /// </summary>
     string Description { get; }
-    
+
     /// <summary>
     /// 执行命令
     /// </summary>
@@ -34,25 +34,17 @@ public interface ICommand
 /// <summary>
 /// 添加包命令
 /// </summary>
-public class AddPackageCommand : ICommand
+public class AddPackageCommand(
+    Services.DefaultPackageInstaller installer,
+    Services.PackageSourceManager sourceManager,
+    Services.DefaultPackageConfigurationManager configManager)
+    : ICommand
 {
-    private readonly Services.DefaultPackageInstaller _installer;
-    private readonly Services.PackageSourceManager _sourceManager;
-    private readonly Services.DefaultPackageConfigurationManager _configManager;
-    
+    private readonly Services.PackageSourceManager _sourceManager = sourceManager;
+
     public string Name => "add";
     public string Description => "Add a package to the project";
-    
-    public AddPackageCommand(
-        Services.DefaultPackageInstaller installer,
-        Services.PackageSourceManager sourceManager,
-        Services.DefaultPackageConfigurationManager configManager)
-    {
-        _installer = installer;
-        _sourceManager = sourceManager;
-        _configManager = configManager;
-    }
-    
+
     public async Task<CommandResult> ExecuteAsync(string[] args)
     {
         if (args.Length < 2)
@@ -64,17 +56,17 @@ public class AddPackageCommand : ICommand
                 ExitCode = 1
             };
         }
-        
+
         var packageId = args[1];
         var version = args.Length > 2 ? args[2] : "latest";
-        
+
         try
         {
             // 查找配置文件
             var configPath = FindConfigFile();
-            
+
             // 添加到配置文件
-            var addedToConfig = await _configManager.AddPackageReferenceAsync(configPath, packageId, version);
+            var addedToConfig = await configManager.AddPackageReferenceAsync(configPath, packageId, version);
             if (!addedToConfig)
             {
                 return new CommandResult
@@ -84,11 +76,11 @@ public class AddPackageCommand : ICommand
                     ExitCode = 1
                 };
             }
-            
+
             // 安装包
-            var config = await _configManager.ReadConfigurationAsync(configPath);
-            var installResult = await _installer.InstallPackageAsync(packageId, version, config.InstallPath);
-            
+            var config = await configManager.ReadConfigurationAsync(configPath);
+            var installResult = await installer.InstallPackageAsync(packageId, version, config.InstallPath);
+
             return new CommandResult
             {
                 Success = installResult.Success,
@@ -106,15 +98,15 @@ public class AddPackageCommand : ICommand
             };
         }
     }
-    
+
     private string FindConfigFile()
     {
         var currentDir = Directory.GetCurrentDirectory();
         var configPath = Path.Combine(currentDir, "o8packages.json");
-        
+
         if (File.Exists(configPath))
             return configPath;
-        
+
         // 如果配置文件不存在，使用默认路径
         return configPath;
     }
@@ -127,10 +119,10 @@ public class RemovePackageCommand : ICommand
 {
     private readonly Services.DefaultPackageInstaller _installer;
     private readonly Services.DefaultPackageConfigurationManager _configManager;
-    
+
     public string Name => "remove";
     public string Description => "Remove a package from the project";
-    
+
     public RemovePackageCommand(
         Services.DefaultPackageInstaller installer,
         Services.DefaultPackageConfigurationManager configManager)
@@ -138,7 +130,7 @@ public class RemovePackageCommand : ICommand
         _installer = installer;
         _configManager = configManager;
     }
-    
+
     public async Task<CommandResult> ExecuteAsync(string[] args)
     {
         if (args.Length < 2)
@@ -150,26 +142,26 @@ public class RemovePackageCommand : ICommand
                 ExitCode = 1
             };
         }
-        
+
         var packageId = args[1];
-        
+
         try
         {
             var configPath = FindConfigFile();
             var config = await _configManager.ReadConfigurationAsync(configPath);
-            
+
             // 从配置文件移除
             var removedFromConfig = await _configManager.RemovePackageReferenceAsync(configPath, packageId);
-            
+
             // 从磁盘移除所有版本
             var installedPackages = await _installer.GetInstalledPackagesAsync(config.InstallPath);
             var packagesToRemove = installedPackages.Where(p => p.Id == packageId);
-            
+
             foreach (var package in packagesToRemove)
             {
                 await _installer.UninstallPackageAsync(package.Id, package.Version, config.InstallPath);
             }
-            
+
             return new CommandResult
             {
                 Success = true,
@@ -187,15 +179,15 @@ public class RemovePackageCommand : ICommand
             };
         }
     }
-    
+
     private string FindConfigFile()
     {
         var currentDir = Directory.GetCurrentDirectory();
         var configPath = Path.Combine(currentDir, "o8packages.json");
-        
+
         if (File.Exists(configPath))
             return configPath;
-        
+
         return configPath;
     }
 }
@@ -206,22 +198,22 @@ public class RemovePackageCommand : ICommand
 public class RestoreCommand : ICommand
 {
     private readonly Services.PackageRestorer _restorer;
-    
+
     public string Name => "restore";
     public string Description => "Restore all packages defined in the configuration file";
-    
+
     public RestoreCommand(Services.PackageRestorer restorer)
     {
         _restorer = restorer;
     }
-    
+
     public async Task<CommandResult> ExecuteAsync(string[] args)
     {
         try
         {
             var currentDir = Directory.GetCurrentDirectory();
             var configPath = Path.Combine(currentDir, "o8packages.json");
-            
+
             if (!File.Exists(configPath))
             {
                 return new CommandResult
@@ -231,9 +223,9 @@ public class RestoreCommand : ICommand
                     ExitCode = 1
                 };
             }
-            
+
             var result = await _restorer.RestorePackagesAsync(configPath);
-            
+
             return new CommandResult
             {
                 Success = result.Success,
@@ -259,15 +251,15 @@ public class RestoreCommand : ICommand
 public class SearchCommand : ICommand
 {
     private readonly Services.PackageSourceManager _sourceManager;
-    
+
     public string Name => "search";
     public string Description => "Search for packages";
-    
+
     public SearchCommand(Services.PackageSourceManager sourceManager)
     {
         _sourceManager = sourceManager;
     }
-    
+
     public async Task<CommandResult> ExecuteAsync(string[] args)
     {
         if (args.Length < 2)
@@ -279,13 +271,13 @@ public class SearchCommand : ICommand
                 ExitCode = 1
             };
         }
-        
+
         var searchTerm = args[1];
-        
+
         try
         {
             var results = await _sourceManager.SearchPackagesAsync(searchTerm);
-            
+
             if (!results.Any())
             {
                 return new CommandResult
@@ -295,13 +287,13 @@ public class SearchCommand : ICommand
                     ExitCode = 0
                 };
             }
-            
+
             var output = $"Found {results.Count()} packages:\n";
             foreach (var package in results.Take(20)) // 限制显示20个结果
             {
                 output += $"  {package.Id} {package.Version} - {package.Description}\n";
             }
-            
+
             return new CommandResult
             {
                 Success = true,

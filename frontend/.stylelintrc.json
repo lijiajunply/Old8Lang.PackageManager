@@ -1,0 +1,15 @@
+{
+  "extends": ["stylelint-config-standard", "stylelint-config-recommended-vue"],
+  "rules": {
+    "vue/html-indent": ["error", {
+      "attribute": 1,
+      "baseIndent": 0,
+      "closeBracket": 0
+    }],
+    "vue/html-closing-bracket-newline": "off",
+    "vue/max-attributes-per-line": ["error", {
+      "singleline": 3,
+      "multiline": 1
+    }]
+  }
+}

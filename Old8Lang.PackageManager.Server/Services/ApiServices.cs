@@ -21,19 +21,11 @@ public interface IApiKeyService
 /// <summary>
 /// API 密钥管理服务实现
 /// </summary>
-public class ApiKeyService : IApiKeyService
+public class ApiKeyService(PackageManagerDbContext dbContext, ApiOptions apiOptions, ILogger<ApiKeyService> logger)
+    : IApiKeyService
 {
-    private readonly PackageManagerDbContext _dbContext;
-    private readonly ApiOptions _apiOptions;
-    private readonly ILogger<ApiKeyService> _logger;
-    
-    public ApiKeyService(PackageManagerDbContext dbContext, ApiOptions apiOptions, ILogger<ApiKeyService> logger)
-    {
-        _dbContext = dbContext;
-        _apiOptions = apiOptions;
-        _logger = logger;
-    }
-    
+    private readonly ApiOptions _apiOptions = apiOptions;
+
     public async Task<ApiKeyEntity?> ValidateApiKeyAsync(string apiKey)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -41,32 +33,32 @@ public class ApiKeyService : IApiKeyService
             return null;
         }
         
-        var keyEntity = await _dbContext.ApiKeys
+        var keyEntity = await dbContext.ApiKeys
             .FirstOrDefaultAsync(k => k.Key == apiKey && k.IsActive);
         
         if (keyEntity == null)
         {
-            _logger.LogWarning("无效的 API 密钥: {ApiKey}", apiKey.Substring(0, Math.Min(8, apiKey.Length)) + "...");
+            logger.LogWarning("无效的 API 密钥: {ApiKey}", apiKey.Substring(0, Math.Min(8, apiKey.Length)) + "...");
             return null;
         }
         
         // 检查是否过期
         if (keyEntity.ExpiresAt < DateTime.UtcNow)
         {
-            _logger.LogWarning("API 密钥已过期: {KeyId}", keyEntity.Id);
+            logger.LogWarning("API 密钥已过期: {KeyId}", keyEntity.Id);
             return null;
         }
         
         // 增加使用计数
         keyEntity.UsageCount++;
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         
         return keyEntity;
     }
     
     public async Task<List<ApiKeyEntity>> GetAllApiKeysAsync()
     {
-        return await _dbContext.ApiKeys
+        return await dbContext.ApiKeys
             .OrderByDescending(k => k.CreatedAt)
             .ToListAsync();
     }
@@ -85,33 +77,33 @@ public class ApiKeyService : IApiKeyService
             UsageCount = 0
         };
         
-        _dbContext.ApiKeys.Add(apiKey);
-        await _dbContext.SaveChangesAsync();
+        dbContext.ApiKeys.Add(apiKey);
+        await dbContext.SaveChangesAsync();
         
-        _logger.LogInformation("API 密钥已创建: {Name} ({KeyId})", name, apiKey.Id);
+        logger.LogInformation("API 密钥已创建: {Name} ({KeyId})", name, apiKey.Id);
         
         return apiKey;
     }
     
     public async Task<bool> RevokeApiKeyAsync(int id)
     {
-        var apiKey = await _dbContext.ApiKeys.FindAsync(id);
+        var apiKey = await dbContext.ApiKeys.FindAsync(id);
         if (apiKey == null)
         {
             return false;
         }
         
         apiKey.IsActive = false;
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         
-        _logger.LogInformation("API 密钥已撤销: {KeyId}", id);
+        logger.LogInformation("API 密钥已撤销: {KeyId}", id);
         
         return true;
     }
     
     public async Task<bool> IncrementUsageAsync(string apiKey)
     {
-        var keyEntity = await _dbContext.ApiKeys
+        var keyEntity = await dbContext.ApiKeys
             .FirstOrDefaultAsync(k => k.Key == apiKey && k.IsActive);
         
         if (keyEntity == null)
@@ -120,7 +112,7 @@ public class ApiKeyService : IApiKeyService
         }
         
         keyEntity.UsageCount++;
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         
         return true;
     }

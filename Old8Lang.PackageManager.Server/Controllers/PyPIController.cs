@@ -10,22 +10,12 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("simple")]
-public class PyPIController : ControllerBase
+public class PyPIController(
+    IPackageManagementService packageService,
+    IPackageSearchService searchService,
+    ILogger<PyPIController> logger)
+    : ControllerBase
 {
-    private readonly IPackageManagementService _packageService;
-    private readonly IPackageSearchService _searchService;
-    private readonly ILogger<PyPIController> _logger;
-    
-    public PyPIController(
-        IPackageManagementService packageService,
-        IPackageSearchService searchService,
-        ILogger<PyPIController> logger)
-    {
-        _packageService = packageService;
-        _searchService = searchService;
-        _logger = logger;
-    }
-    
     /// <summary>
     /// PyPI 简单索引 - 获取所有 Python 包列表
     /// </summary>
@@ -34,7 +24,7 @@ public class PyPIController : ControllerBase
     {
         try
         {
-            var pythonPackages = await _packageService.SearchPackagesAsync("", "python", 0, int.MaxValue);
+            var pythonPackages = await packageService.SearchPackagesAsync("", "python", 0, int.MaxValue);
             
             var packageNames = pythonPackages
                 .Select(p => p.PackageId)
@@ -50,7 +40,7 @@ public class PyPIController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取 PyPI 简单索引失败");
+            logger.LogError(ex, "获取 PyPI 简单索引失败");
             return StatusCode(500);
         }
     }
@@ -64,7 +54,7 @@ public class PyPIController : ControllerBase
     {
         try
         {
-            var packages = await _packageService.GetAllVersionsAsync(packageName);
+            var packages = await packageService.GetAllVersionsAsync(packageName);
             var pythonPackages = packages.Where(p => p.Language == "python").ToList();
             
             if (!pythonPackages.Any())
@@ -80,7 +70,7 @@ public class PyPIController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取包版本列表失败: {Package}", packageName);
+            logger.LogError(ex, "获取包版本列表失败: {Package}", packageName);
             return StatusCode(500);
         }
     }
@@ -99,11 +89,11 @@ public class PyPIController : ControllerBase
             var version = ExtractVersionFromFileName(fileName);
             if (string.IsNullOrEmpty(version))
             {
-                _logger.LogWarning("无法从文件名解析版本: {FileName}", fileName);
+                logger.LogWarning("无法从文件名解析版本: {FileName}", fileName);
                 return BadRequest();
             }
             
-            var package = await _packageService.GetPackageAsync(packageName, version, "python");
+            var package = await packageService.GetPackageAsync(packageName, version, "python");
             if (package == null || package.Language != "python")
             {
                 return NotFound();
@@ -117,13 +107,13 @@ public class PyPIController : ControllerBase
             }
             
             // 增加下载计数
-            await _packageService.IncrementDownloadCountAsync(packageName, version);
+            await packageService.IncrementDownloadCountAsync(packageName, version);
             
             return File(packageStream, "application/octet-stream", fileName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "下载 Python 包失败: {Package}/{File}", packageName, fileName);
+            logger.LogError(ex, "下载 Python 包失败: {Package}/{File}", packageName, fileName);
             return StatusCode(500);
         }
     }
@@ -137,7 +127,7 @@ public class PyPIController : ControllerBase
     {
         try
         {
-            var packages = await _packageService.GetAllVersionsAsync(packageName);
+            var packages = await packageService.GetAllVersionsAsync(packageName);
             var pythonPackages = packages.Where(p => p.Language == "python").ToList();
             
             if (!pythonPackages.Any())
@@ -150,7 +140,7 @@ public class PyPIController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取包 JSON 信息失败: {Package}", packageName);
+            logger.LogError(ex, "获取包 JSON 信息失败: {Package}", packageName);
             return StatusCode(500);
         }
     }
@@ -167,7 +157,7 @@ public class PyPIController : ControllerBase
         try
         {
             var skip = (page - 1) * per_page;
-            var searchResult = await _searchService.SearchAsync(q, "python", skip, per_page);
+            var searchResult = await searchService.SearchAsync(q, "python", skip, per_page);
             
             // 筛选 Python 包
             var pythonResults = searchResult.Data
@@ -203,7 +193,7 @@ public class PyPIController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "搜索 Python 包失败: {Query}", q);
+            logger.LogError(ex, "搜索 Python 包失败: {Query}", q);
             return StatusCode(500);
         }
     }

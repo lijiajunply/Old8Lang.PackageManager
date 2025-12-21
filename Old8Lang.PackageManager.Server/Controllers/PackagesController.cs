@@ -13,28 +13,14 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 [ApiController]
 [Route("v3")]
 [Produces("application/json")]
-public class PackagesController : ControllerBase
+public class PackagesController(
+    IPackageSearchService searchService,
+    IPackageManagementService packageService,
+    IApiKeyService apiKeyService,
+    ApiOptions apiOptions,
+    ILogger<PackagesController> logger)
+    : ControllerBase
 {
-    private readonly IPackageSearchService _searchService;
-    private readonly IPackageManagementService _packageService;
-    private readonly IApiKeyService _apiKeyService;
-    private readonly ApiOptions _apiOptions;
-    private readonly ILogger<PackagesController> _logger;
-    
-    public PackagesController(
-        IPackageSearchService searchService,
-        IPackageManagementService packageService,
-        IApiKeyService apiKeyService,
-        ApiOptions apiOptions,
-        ILogger<PackagesController> logger)
-    {
-        _searchService = searchService;
-        _packageService = packageService;
-        _apiKeyService = apiKeyService;
-        _apiOptions = apiOptions;
-        _logger = logger;
-    }
-    
     /// <summary>
     /// 搜索包
     /// </summary>
@@ -53,12 +39,12 @@ public class PackagesController : ControllerBase
     {
         try
         {
-            var result = await _searchService.SearchAsync(q, language, skip, take);
+            var result = await searchService.SearchAsync(q, language, skip, take);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "搜索包失败: {Query}", q);
+            logger.LogError(ex, "搜索包失败: {Query}", q);
             return StatusCode(500, ApiResponse<object>.ErrorResult("搜索包失败"));
         }
     }
@@ -75,12 +61,12 @@ public class PackagesController : ControllerBase
     {
         try
         {
-            var result = await _searchService.GetPopularAsync(language, take);
+            var result = await searchService.GetPopularAsync(language, take);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取热门包失败");
+            logger.LogError(ex, "获取热门包失败");
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取热门包失败"));
         }
     }
@@ -103,11 +89,11 @@ public class PackagesController : ControllerBase
             
             if (!string.IsNullOrEmpty(version))
             {
-                result = await _searchService.GetPackageDetailsAsync(id, version, language);
+                result = await searchService.GetPackageDetailsAsync(id, version, language);
             }
             else
             {
-                result = await _searchService.GetPackageDetailsAsync(id, language);
+                result = await searchService.GetPackageDetailsAsync(id, language);
             }
             
             if (result == null)
@@ -119,7 +105,7 @@ public class PackagesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取包详细信息失败: {PackageId} {Version} {Language}", id, version, language);
+            logger.LogError(ex, "获取包详细信息失败: {PackageId} {Version} {Language}", id, version, language);
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取包详细信息失败"));
         }
     }
@@ -134,7 +120,7 @@ public class PackagesController : ControllerBase
         try
         {
             // 验证 API 密钥
-            if (_apiOptions.RequireApiKey)
+            if (apiOptions.RequireApiKey)
             {
                 var apiKey = GetApiKeyFromRequest();
                 if (string.IsNullOrEmpty(apiKey))
@@ -142,7 +128,7 @@ public class PackagesController : ControllerBase
                     return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
                 }
                 
-                var keyEntity = await _apiKeyService.ValidateApiKeyAsync(apiKey);
+                var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
@@ -170,7 +156,7 @@ public class PackagesController : ControllerBase
             
             // 上传包
             await using var packageStream = request.PackageFile.OpenReadStream();
-            var packageEntity = await _packageService.UploadPackageAsync(request, packageStream);
+            var packageEntity = await packageService.UploadPackageAsync(request, packageStream);
             
             var response = new PackageDetailResponse
             {
@@ -201,12 +187,12 @@ public class PackagesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "包上传失败: {Message}", ex.Message);
+            logger.LogWarning(ex, "包上传失败: {Message}", ex.Message);
             return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "包上传失败");
+            logger.LogError(ex, "包上传失败");
             return StatusCode(500, ApiResponse<object>.ErrorResult("包上传失败"));
         }
     }
@@ -222,7 +208,7 @@ public class PackagesController : ControllerBase
         try
         {
             // 验证 API 密钥
-            if (_apiOptions.RequireApiKey)
+            if (apiOptions.RequireApiKey)
             {
                 var apiKey = GetApiKeyFromRequest();
                 if (string.IsNullOrEmpty(apiKey))
@@ -230,7 +216,7 @@ public class PackagesController : ControllerBase
                     return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
                 }
                 
-                var keyEntity = await _apiKeyService.ValidateApiKeyAsync(apiKey);
+                var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
@@ -243,7 +229,7 @@ public class PackagesController : ControllerBase
                 }
             }
             
-            var result = await _packageService.DeletePackageAsync(id, version);
+            var result = await packageService.DeletePackageAsync(id, version);
             if (!result)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
@@ -253,7 +239,7 @@ public class PackagesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "删除包失败: {PackageId} {Version}", id, version);
+            logger.LogError(ex, "删除包失败: {PackageId} {Version}", id, version);
             return StatusCode(500, ApiResponse<object>.ErrorResult("删除包失败"));
         }
     }
@@ -268,7 +254,7 @@ public class PackagesController : ControllerBase
     {
         try
         {
-            var package = await _packageService.GetPackageAsync(id, version);
+            var package = await packageService.GetPackageAsync(id, version);
             if (package == null)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
@@ -282,14 +268,14 @@ public class PackagesController : ControllerBase
             }
             
             // 增加下载计数
-            await _packageService.IncrementDownloadCountAsync(id, version);
+            await packageService.IncrementDownloadCountAsync(id, version);
             
             var fileName = $"{id}.{version}.o8pkg";
             return File(packageStream, "application/octet-stream", fileName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "下载包失败: {PackageId} {Version}", id, version);
+            logger.LogError(ex, "下载包失败: {PackageId} {Version}", id, version);
             return StatusCode(500, ApiResponse<object>.ErrorResult("下载包失败"));
         }
     }

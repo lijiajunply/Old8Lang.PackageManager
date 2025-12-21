@@ -20,12 +20,12 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
                 Sources = GetDefaultSources()
             };
         }
-        
+
         try
         {
             var json = await File.ReadAllTextAsync(configPath);
             var configuration = JsonSerializer.Deserialize<PackageConfiguration>(json);
-            
+
             return configuration ?? new PackageConfiguration
             {
                 Sources = GetDefaultSources()
@@ -36,7 +36,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             throw new InvalidOperationException($"Failed to read package configuration: {ex.Message}", ex);
         }
     }
-    
+
     public async Task<bool> WriteConfigurationAsync(string configPath, PackageConfiguration configuration)
     {
         try
@@ -46,12 +46,12 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             {
                 Directory.CreateDirectory(directory);
             }
-            
-            var json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+
+            var json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions
+            {
+                WriteIndented = true
             });
-            
+
             await File.WriteAllTextAsync(configPath, json);
             return true;
         }
@@ -61,17 +61,17 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             return false;
         }
     }
-    
+
     public async Task<bool> AddPackageReferenceAsync(string configPath, string packageId, string version)
     {
         try
         {
             var configuration = await ReadConfigurationAsync(configPath);
-            
+
             // 检查是否已存在
-            var existingRef = configuration.References.FirstOrDefault(r => 
+            var existingRef = configuration.References.FirstOrDefault(r =>
                 r.PackageId.Equals(packageId, StringComparison.OrdinalIgnoreCase));
-            
+
             if (existingRef != null)
             {
                 existingRef.Version = version;
@@ -84,7 +84,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
                     Version = version
                 });
             }
-            
+
             return await WriteConfigurationAsync(configPath, configuration);
         }
         catch (Exception ex)
@@ -93,22 +93,22 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             return false;
         }
     }
-    
+
     public async Task<bool> RemovePackageReferenceAsync(string configPath, string packageId)
     {
         try
         {
             var configuration = await ReadConfigurationAsync(configPath);
-            
-            var reference = configuration.References.FirstOrDefault(r => 
+
+            var reference = configuration.References.FirstOrDefault(r =>
                 r.PackageId.Equals(packageId, StringComparison.OrdinalIgnoreCase));
-            
+
             if (reference != null)
             {
                 configuration.References.Remove(reference);
                 return await WriteConfigurationAsync(configPath, configuration);
             }
-            
+
             return true; // 不存在也算成功
         }
         catch (Exception ex)
@@ -117,7 +117,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             return false;
         }
     }
-    
+
     public async Task<IEnumerable<PackageReference>> GetPackageReferencesAsync(string configPath)
     {
         try
@@ -131,23 +131,24 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             return Enumerable.Empty<PackageReference>();
         }
     }
-    
+
     private List<PackageSource> GetDefaultSources()
     {
-        return new List<PackageSource>
-        {
-            new PackageSource
+        return
+        [
+            new PackageSource()
             {
                 Name = "Old8Lang Official",
                 Source = "https://packages.old8lang.org/v3/index.json",
                 IsEnabled = true
             },
-            new PackageSource
+
+            new PackageSource()
             {
                 Name = "Local Packages",
                 Source = "./local-packages",
                 IsEnabled = true
             }
-        };
+        ];
     }
 }

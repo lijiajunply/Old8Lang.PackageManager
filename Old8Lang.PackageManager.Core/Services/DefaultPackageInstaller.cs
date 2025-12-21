@@ -7,17 +7,9 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// <summary>
 /// 默认包安装器实现
 /// </summary>
-public class DefaultPackageInstaller : IPackageInstaller
+public class DefaultPackageInstaller(PackageSourceManager sourceManager, IPackageResolver resolver)
+    : IPackageInstaller
 {
-    private readonly PackageSourceManager _sourceManager;
-    private readonly IPackageResolver _resolver;
-    
-    public DefaultPackageInstaller(PackageSourceManager sourceManager, IPackageResolver resolver)
-    {
-        _sourceManager = sourceManager;
-        _resolver = resolver;
-    }
-    
     public async Task<InstallResult> InstallPackageAsync(string packageId, string version, string installPath)
     {
         var result = new InstallResult();
@@ -33,7 +25,7 @@ public class DefaultPackageInstaller : IPackageInstaller
             }
             
             // 解析依赖关系
-            var resolveResult = await _resolver.ResolveDependenciesAsync(packageId, version, _sourceManager.GetEnabledSources());
+            var resolveResult = await resolver.ResolveDependenciesAsync(packageId, version, sourceManager.GetEnabledSources());
             if (!resolveResult.Success)
             {
                 result.Success = false;
@@ -46,7 +38,7 @@ public class DefaultPackageInstaller : IPackageInstaller
             Directory.CreateDirectory(packageDir);
             
             // 下载并安装包
-            var enabledSources = _sourceManager.GetEnabledSources();
+            var enabledSources = sourceManager.GetEnabledSources();
             Package? package = null;
             
             foreach (var source in enabledSources)
