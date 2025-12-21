@@ -117,7 +117,7 @@ public class MultiLanguageApiControllerTests
         var responseValue = okResult!.Value as PackageSearchResponse;
         responseValue.Should().NotBeNull();
         responseValue!.TotalHits.Should().Be(count);
-        responseValue.Data.Should().All(p => p.Language == language);
+        responseValue.Data.All(p => p.Language == language).Should().BeTrue();
     }
 
     [Fact]
@@ -338,7 +338,7 @@ public class MultiLanguageApiControllerTests
         var result = await _pyPiController.GetPackageJson("requests");
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
+        var okResult = result as OkObjectResult;
         okResult.Should().NotBeNull();
         
         var responseValue = okResult!.Value;
@@ -352,7 +352,7 @@ public class MultiLanguageApiControllerTests
         responseDict.Should().ContainKey("releases");
         responseDict.Should().ContainKey("last_serial");
         
-        var info = responseDict["info"] as JsonElement;
+        var info = (JsonElement)responseDict["info"];
         info.GetProperty("name").GetString().Should().Be("requests");
         info.GetProperty("version").GetString().Should().Be("2.28.0");
     }
@@ -390,7 +390,7 @@ public class MultiLanguageApiControllerTests
         var result = await _pyPiController.SearchPackages("http", 1, 20);
 
         // Assert
-        var okResult = result.Result as OkObjectResult;
+        var okResult = result as OkObjectResult;
         okResult.Should().NotBeNull();
         
         var responseValue = okResult!.Value;
@@ -403,7 +403,7 @@ public class MultiLanguageApiControllerTests
         responseDict.Should().ContainKey("info");
         responseDict.Should().ContainKey("results");
         
-        var results = responseDict["results"] as JsonElement;
+        var results = (JsonElement)responseDict["results"];
         results.GetArrayLength().Should().Be(2);
     }
 

@@ -23,7 +23,8 @@ public class MultiLanguagePackageManagementServiceTests
 
     public MultiLanguagePackageManagementServiceTests()
     {
-        _mockDbContext = new Mock<PackageManagerDbContext>();
+        var options = new DbContextOptionsBuilder<PackageManagerDbContext>().Options;
+        _mockDbContext = new Mock<PackageManagerDbContext>(options);
         _mockStorageService = new Mock<IPackageStorageService>();
         _mockPythonParser = new Mock<IPythonPackageParser>();
         _mockLogger = new Mock<ILogger<PackageManagementService>>();
@@ -319,7 +320,7 @@ public class MultiLanguagePackageManagementServiceTests
             Size = 1024,
             PublishedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            DownloadCount = downloadCount,
+            DownloadCount = (int)downloadCount,
             IsListed = true,
             IsPrerelease = false,
             PackageTags = new List<PackageTagEntity>(),

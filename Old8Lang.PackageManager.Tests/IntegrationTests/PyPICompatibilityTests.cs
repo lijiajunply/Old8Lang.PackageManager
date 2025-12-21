@@ -69,7 +69,7 @@ public class PyPICompatibilityTests : IClassFixture<WebApplicationFactory<Progra
         packageInfo.Should().ContainKey("releases");
         packageInfo.Should().ContainKey("last_serial");
         
-        var info = packageInfo["info"] as JsonElement;
+        var info = (JsonElement)packageInfo["info"];
         info.GetProperty("name").GetString().Should().Be("requests");
     }
 
@@ -89,8 +89,8 @@ public class PyPICompatibilityTests : IClassFixture<WebApplicationFactory<Progra
         searchResult.Should().ContainKey("info");
         searchResult.Should().ContainKey("results");
         
-        var results = searchResult["results"] as JsonElement;
-        results.GetArrayLength().Should().BeGreaterOrEqualTo(0);
+        var results = (JsonElement)searchResult["results"];
+        results.GetArrayLength().Should().BeGreaterThanOrEqualTo(0);
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public class PyPICompatibilityTests : IClassFixture<WebApplicationFactory<Progra
         var responses = await Task.WhenAll(tasks);
 
         // Assert
-        responses.Should().All(r => r.StatusCode == System.Net.HttpStatusCode.OK);
+        responses.All(r => r.StatusCode == System.Net.HttpStatusCode.OK).Should().BeTrue();
         
         // All responses should be successful and complete
         foreach (var response in responses)
