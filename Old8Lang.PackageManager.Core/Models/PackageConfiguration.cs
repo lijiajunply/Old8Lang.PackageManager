@@ -74,14 +74,4 @@ public class PackageReference
     /// 版本
     /// </summary>
     public string Version { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 是否为开发依赖
-    /// </summary>
-    public bool IsDevelopmentDependency { get; set; } = false;
-
-    /// <summary>
-    /// 目标框架
-    /// </summary>
-    public string? TargetFramework { get; set; }
 }
