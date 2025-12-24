@@ -76,19 +76,17 @@ public class Old8LangAdapter : ILanguageAdapter
             };
 
             // 解析依赖
-            if (root.TryGetProperty("dependencies", out var depsElement) &&
-                depsElement.ValueKind == JsonValueKind.Array)
+            if (!root.TryGetProperty("dependencies", out var depsElement) ||
+                depsElement.ValueKind != JsonValueKind.Array) return metadata;
+            foreach (var dep in depsElement.EnumerateArray())
             {
-                foreach (var dep in depsElement.EnumerateArray())
+                var depInfo = new DependencyInfo
                 {
-                    var depInfo = new DependencyInfo
-                    {
-                        PackageId = dep.GetProperty("id").GetString() ?? "",
-                        VersionConstraint = dep.GetProperty("version").GetString() ?? "",
-                        IsOptional = dep.TryGetProperty("optional", out var opt) && opt.GetBoolean()
-                    };
-                    metadata.Dependencies.Add(depInfo);
-                }
+                    PackageId = dep.GetProperty("id").GetString() ?? "",
+                    VersionConstraint = dep.GetProperty("version").GetString() ?? "",
+                    IsOptional = dep.TryGetProperty("optional", out var opt) && opt.GetBoolean()
+                };
+                metadata.Dependencies.Add(depInfo);
             }
 
             return metadata;

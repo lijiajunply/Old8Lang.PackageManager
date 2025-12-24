@@ -47,7 +47,8 @@ public class PackageRestorer
             // 获取包引用列表
             var references = await _configManager.GetPackageReferencesAsync(configPath);
 
-            if (!references.Any())
+            var packageReferences = references as PackageReference[] ?? references.ToArray();
+            if (packageReferences.Length == 0)
             {
                 result.Success = true;
                 result.Message = "No packages to restore.";
@@ -55,7 +56,7 @@ public class PackageRestorer
             }
 
             // 还原每个包
-            foreach (var reference in references)
+            foreach (var reference in packageReferences)
             {
                 var installResult = await _installer.InstallPackageAsync(
                     reference.PackageId,

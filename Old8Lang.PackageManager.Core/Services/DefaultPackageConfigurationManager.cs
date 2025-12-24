@@ -10,7 +10,7 @@ namespace Old8Lang.PackageManager.Core.Services;
 public class DefaultPackageConfigurationManager : IPackageConfigurationManager
 {
     /// <summary>
-    /// 
+    /// 读取包配置
     /// </summary>
     /// <param name="configPath"></param>
     /// <returns></returns>
@@ -44,7 +44,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
     }
 
     /// <summary>
-    /// 
+    /// 写入包配置
     /// </summary>
     /// <param name="configPath"></param>
     /// <param name="configuration"></param>
@@ -75,7 +75,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
     }
 
     /// <summary>
-    /// 
+    /// 添加包引用
     /// </summary>
     /// <param name="configPath"></param>
     /// <param name="packageId"></param>
@@ -114,7 +114,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
     }
 
     /// <summary>
-    /// 
+    /// 移除包引用
     /// </summary>
     /// <param name="configPath"></param>
     /// <param name="packageId"></param>
@@ -140,7 +140,7 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
     }
 
     /// <summary>
-    /// 
+    /// 获取包引用
     /// </summary>
     /// <param name="configPath"></param>
     /// <returns></returns>

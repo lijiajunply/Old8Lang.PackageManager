@@ -114,7 +114,14 @@ public class DefaultPackageInstaller(PackageSourceManager sourceManager, IPackag
         return result;
     }
 
-    public async Task<bool> UninstallPackageAsync(string packageId, string version, string installPath)
+    /// <summary>
+    /// 卸载包
+    /// </summary>
+    /// <param name="packageId"></param>
+    /// <param name="version"></param>
+    /// <param name="installPath"></param>
+    /// <returns></returns>
+    public Task<bool> UninstallPackageAsync(string packageId, string version, string installPath)
     {
         try
         {
@@ -130,15 +137,15 @@ public class DefaultPackageInstaller(PackageSourceManager sourceManager, IPackag
                     Directory.Delete(parentDir);
                 }
 
-                return true;
+                return Task.FromResult(true);
             }
 
-            return false;
+            return Task.FromResult(false);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error uninstalling package {packageId} version {version}: {ex.Message}");
-            return false;
+            return Task.FromResult(false);
         }
     }
 

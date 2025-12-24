@@ -11,17 +11,17 @@ public interface IPackageInstaller
     /// 安装包
     /// </summary>
     Task<InstallResult> InstallPackageAsync(string packageId, string version, string installPath);
-    
+
     /// <summary>
     /// 卸载包
     /// </summary>
     Task<bool> UninstallPackageAsync(string packageId, string version, string installPath);
-    
+
     /// <summary>
     /// 检查包是否已安装
     /// </summary>
     Task<bool> IsPackageInstalledAsync(string packageId, string version, string installPath);
-    
+
     /// <summary>
     /// 获取已安装的包列表
     /// </summary>
@@ -33,8 +33,23 @@ public interface IPackageInstaller
 /// </summary>
 public class InstallResult
 {
+    /// <summary>
+    /// 是否成功
+    /// </summary>
     public bool Success { get; set; }
+
+    /// <summary>
+    /// 安装信息
+    /// </summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 安装的包
+    /// </summary>
     public Package? InstalledPackage { get; set; }
-    public List<string> Warnings { get; set; } = new();
+
+    /// <summary>
+    /// 警告信息
+    /// </summary>
+    public List<string> Warnings { get; set; } = [];
 }

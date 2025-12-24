@@ -37,6 +37,7 @@ public interface IPackageLoader
 /// <summary>
 /// 包加载上下文
 /// </summary>
+[Serializable]
 public class PackageLoadContext
 {
     /// <summary>

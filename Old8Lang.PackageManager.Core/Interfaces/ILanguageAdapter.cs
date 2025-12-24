@@ -101,5 +101,5 @@ public class DependencyInfo
     /// <summary>
     /// 是否可选
     /// </summary>
-    public bool IsOptional { get; set; } = false;
+    public bool IsOptional { get; set; }
 }

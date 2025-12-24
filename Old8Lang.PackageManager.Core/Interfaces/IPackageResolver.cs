@@ -28,9 +28,21 @@ public interface IPackageResolver
 /// </summary>
 public class ResolveResult
 {
+    /// <summary>
+    /// 是否成功
+    /// </summary>
     public bool Success { get; set; }
+    /// <summary>
+    /// 错误信息
+    /// </summary>
     public string Message { get; set; } = string.Empty;
+    /// <summary>
+    /// 解析后的依赖关系
+    /// </summary>
     public List<PackageDependency> ResolvedDependencies { get; set; } = new();
+    /// <summary>
+    /// 冲突
+    /// </summary>
     public List<string> Conflicts { get; set; } = new();
 }
 
@@ -39,8 +51,20 @@ public class ResolveResult
 /// </summary>
 public class VersionRange
 {
+    /// <summary>
+    /// 最小版本
+    /// </summary>
     public string MinVersion { get; set; } = string.Empty;
+    /// <summary>
+    /// 最大版本
+    /// </summary>
     public string MaxVersion { get; set; } = string.Empty;
+    /// <summary>
+    /// 包含最小版本
+    /// </summary>
     public bool IncludeMinVersion { get; set; } = true;
+    /// <summary>
+    /// 包含最大版本
+    /// </summary>
     public bool IncludeMaxVersion { get; set; } = true;
 }
