@@ -115,6 +115,7 @@ public class PackagesController(
     /// </summary>
     [HttpPost("package")]
     [RequestSizeLimit(100 * 1024 * 1024)] // 100MB
+    [Authorize(Policy = "CanUpload")]
     public async Task<ActionResult<PackageDetailResponse>> UploadPackage([FromForm] PackageUploadRequest request)
     {
         try
@@ -295,6 +296,19 @@ public class PackagesController(
             return apiKey.FirstOrDefault();
         }
         
+        return null;
+    }
+
+    /// <summary>
+    /// 获取当前用户 ID
+    /// </summary>
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+        {
+            return userId;
+        }
         return null;
     }
     

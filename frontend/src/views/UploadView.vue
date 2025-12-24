@@ -1,12 +1,29 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-8 text-center">上传包</h1>
+   <div class="min-h-screen bg-gray-50">
+     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+       <!-- 页面标题 -->
+       <div class="mb-8 text-center">
+         <h1 class="text-3xl font-bold text-gray-900">上传包</h1>
+         <p class="mt-2 text-gray-600">
+           {{ userStore.isAuthenticated ? `欢迎回来，${userStore.displayName}！` : '请先登录后再上传包' }}
+         </p>
+       </div>
+
+       <!-- 未登录提示 -->
+       <div v-if="!userStore.isAuthenticated" class="text-center py-12">
+         <n-empty description="需要登录才能上传包">
+           <template #extra>
+             <n-button type="primary" @click="$router.push('/login')">
+               立即登录
+             </n-button>
+           </template>
+         </n-empty>
+       </div>
       
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- 上传表单 -->
-        <div class="lg:col-span-2">
-          <n-card>
+       <!-- 上传表单 -->
+       <div v-if="userStore.isAuthenticated" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         <div class="lg:col-span-2">
+           <n-card>
             <n-form
               ref="formRef"
               :model="formData"
@@ -137,12 +154,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useMessage, type FormInst, type FormRules } from 'naive-ui'
 import type { PackageApi } from '@/api/package'
 import type { UploadFileInfo } from 'naive-ui'
+import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
 
 const message = useMessage()
+const userStore = useUserStore()
+const router = useRouter()
 
 // 表单数据
 const formRef = ref<FormInst | null>(null)

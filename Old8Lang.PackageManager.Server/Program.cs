@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Old8Lang.PackageManager.Server.Configuration;
 using Old8Lang.PackageManager.Server.Data;
 using Old8Lang.PackageManager.Server.Services;
@@ -9,10 +10,47 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<PackageStorageOptions>(builder.Configuration.GetSection("PackageStorage"));
 builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection("Api"));
 builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection("Security"));
+builder.Services.Configure<OidcConfiguration>(builder.Configuration.GetSection("Authentication:OIDC"));
+builder.Services.Configure<AuthenticationConfiguration>(builder.Configuration.GetSection("Authentication"));
 
-// 添加数据库上下文
-builder.Services.AddDbContext<PackageManagerDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// 配置数据库
+var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SQLite";
+switch (dbProvider.ToUpperInvariant())
+{
+    case "POSTGRESQL":
+        // 先添加 Npgsql 包，暂时注释掉
+        // builder.Services.AddDbContext<PackageManagerDbContext>(options =>
+        //     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
+        builder.Services.AddDbContext<PackageManagerDbContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+        break;
+    case "SQLSERVER":
+        // 先添加 SqlServer 包，暂时注释掉
+        // builder.Services.AddDbContext<PackageManagerDbContext>(options =>
+        //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Services.AddDbContext<PackageManagerDbContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+        break;
+    default:
+        builder.Services.AddDbContext<PackageManagerDbContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+        break;
+}
+
+// 添加用户服务
+builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<OidcAuthenticationService>();
+
+// 配置认证
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = "oidc-github"; // 默认使用 GitHub 登录
+});
+
+// 延迟配置认证，在所有服务注册后
+builder.Services.AddSingleton<IStartupFilter>(new AuthenticationStartupFilter());
 
 // 添加服务
 builder.Services.AddScoped<IPackageStorageService, PackageStorageService>();
@@ -23,6 +61,8 @@ builder.Services.AddScoped<IPythonPackageParser, PythonPackageParser>();
 builder.Services.AddScoped<IJavaScriptPackageParser, JavaScriptPackageParser>();
 builder.Services.AddScoped<IPackageSignatureService, PackageSignatureService>();
 builder.Services.AddScoped<IPackageIntegrityService, PackageIntegrityService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<OidcAuthenticationService>();
 
 // 添加控制器
 builder.Services.AddControllers();

@@ -1,9 +1,71 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- 基础配置 -->
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet 包配置 -->
+    <PackageId>Old8Lang.PackageManager.Core</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Old8Lang Team</Authors>
+    <Company>Old8Lang</Company>
+    <Product>Old8Lang Package Manager Core</Product>
+    <Description>通用的包管理器核心库，支持包解析、依赖管理、版本控制等功能。设计为语言无关的通用框架，可被任何脚本语言项目使用来实现包管理功能。</Description>
+    <PackageDescription>Old8Lang.PackageManager.Core 是一个通用的包管理器核心库，提供了包解析、依赖关系解析、版本管理、包源管理等核心功能。
+
+主要特性：
+- 智能依赖解析：支持复杂依赖关系的回溯算法
+- 多源管理：支持本地源、远程源、私有源
+- 版本控制：完整的语义化版本支持
+- 扩展性强：基于接口设计，易于扩展
+- 语言无关：可被任何编程语言的包管理系统使用
+
+适用场景：
+- 脚本语言的包管理系统
+- 自定义包管理工具
+- 私有包仓库系统
+- 依赖管理解决方案</PackageDescription>
+    <Copyright>Copyright © Old8Lang Team 2024-2025</Copyright>
+    <PackageProjectUrl>https://github.com/old8lang/o8pm</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/old8lang/o8pm</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>package-manager;dependency-resolver;version-control;old8lang;scripting;package-management;nuget;dependency-management;package-resolution;language-agnostic</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>v1.0.0 - 初始版本
+- 完整的包解析功能
+- 依赖关系智能解析
+- 多包源管理
+- 语义化版本控制
+- 扩展性设计</PackageReleaseNotes>
+
+    <!-- 包生成选项 -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- README 文件 -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- 图标 -->
+    <!-- <PackageIcon>icon.png</PackageIcon> -->
   </PropertyGroup>
+
+  <!-- 包含 README 到 NuGet 包 -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <!-- 如果有图标文件，取消下面的注释 -->
+    <!-- <None Include="icon.png" Pack="true" PackagePath="\" /> -->
+  </ItemGroup>
+
+  <!-- 依赖项（如果有的话） -->
+  <ItemGroup>
+    <!-- 这里可以添加外部依赖 -->
+    <!-- <PackageReference Include="Newtonsoft.Json" Version="13.0.3" /> -->
+  </ItemGroup>
 
 </Project>

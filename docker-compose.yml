@@ -1,19 +1,26 @@
 version: '3.8'
 
 services:
-  # 数据库服务
-  database:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  # PostgreSQL 数据库服务
+  postgres:
+    image: postgres:16-alpine
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=Old8Lang123!
-      - MSSQL_PID=Developer
+      - POSTGRES_DB=Old8LangPackageManager
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Old8Lang123!
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - old8lang_db_data:/var/opt/mssql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - old8lang-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Redis 缓存服务
   redis:
@@ -24,6 +31,13 @@ services:
       - redis_data:/data
     networks:
       - old8lang-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 后端 API 服务
   backend:
@@ -32,8 +46,12 @@ services:
       dockerfile: Old8Lang.PackageManager.Server/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=database,1433;Database=Old8LangPackageManager;User Id=sa;Password=Old8Lang123!;TrustServerCertificate=true
+      - DatabaseProvider=PostgreSQL
+      - ConnectionStrings__PostgresConnection=Host=postgres;Database=Old8LangPackageManager;Username=postgres;Password=Old8Lang123!
+      - ConnectionStrings__Redis=redis:6379
+      - Redis__Enabled=true
       - Redis__ConnectionString=redis:6379
+      - Authentication__OIDC__Enabled=true
     ports:
       - "5000:80"
     depends_on:
@@ -59,7 +77,7 @@ services:
       - old8lang-network
 
 volumes:
-  old8lang_db_data:
+  postgres_data:
   redis_data:
 
 networks:

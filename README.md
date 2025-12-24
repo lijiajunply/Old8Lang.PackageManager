@@ -1,30 +1,108 @@
 # Old8Lang Package Manager (o8pm)
 
-基于 NuGet 设计思路实现的 Old8Lang 语言包管理器，提供完整的包生态系统解决方案。
+基于 NuGet 设计思路实现的现代化多语言包管理器，为 Old8Lang、Python、JavaScript/TypeScript 提供完整的包生态系统解决方案。
 
-## 📋 概览
+## 📋 项目概述
 
-Old8Lang Package Manager 是一个现代化的包管理系统，参考了 NuGet 的核心设计模式，为 Old8Lang 语言提供完整的包管理解决方案。它支持包的创建、打包、分发、安装和管理等全生命周期操作。
+Old8Lang Package Manager 是一个企业级的包管理系统，参考了 NuGet 的核心设计模式，同时支持多种编程语言的包管理。它提供包的创建、打包、分发、安装和管理等全生命周期操作，具备完善的 Web 界面、RESTful API 和 CLI 工具。
 
-## 🏗️ 核心架构
+### 🌟 主要特性
+
+- ✅ **多语言支持**: Old8Lang、Python、JavaScript/TypeScript
+- ✅ **智能依赖解析**: 回溯算法解决复杂依赖冲突
+- ✅ **多源管理**: 本地源、远程源、私有源支持
+- ✅ **版本兼容性**: 语义化版本控制和约束检查
+- ✅ **Web 界面**: 基于 Vue 3 的现代化管理界面
+- ✅ **RESTful API**: 完整的服务端 API，兼容 PyPI 和 NPM
+- ✅ **安全机制**: 包完整性验证、API 密钥认证
+- ✅ **容器化部署**: Docker 和 Docker Compose 支持
+- ✅ **高性能**: 并发下载、多级缓存、增量更新
+
+## 🏗️ 系统架构
+
+### 整体架构图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (Vue 3)                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │   包搜索    │ │   包管理    │ │     上传发布        │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │ HTTP/WebSocket
+┌─────────────────────────────────────────────────────────────┐
+│                   Backend (ASP.NET Core)                   │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │  API 层     │ │  业务逻辑   │ │      数据访问       │   │
+│  │ Controllers │ │  Services   │ │   Entity Framework  │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                 Storage Layer                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │    文件存储 │ │    数据库   │ │       缓存          │   │
+│  │   (Packages)│ │  (SQLite)   │ │      (Redis)       │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### 核心组件
 
-- **包源管理 (PackageSourceManager)** - 管理多个包源，支持本地和远程源
-- **包安装器 (DefaultPackageInstaller)** - 负责包的安装、卸载和管理
-- **依赖解析器 (DefaultPackageResolver)** - 智能解析包依赖关系
-- **版本管理器 (VersionManager)** - 语义化版本控制和兼容性检查
-- **包配置管理器 (DefaultPackageConfigurationManager)** - 管理项目包配置文件
-- **包还原器 (PackageRestorer)** - 批量还原项目依赖
+#### 1. CLI 工具 (Old8Lang.PackageManager)
+- **命令行界面**: 包管理的命令行工具
+- **核心服务**: 包源管理、依赖解析、安装器、配置管理
+- **支持命令**: `add`, `remove`, `restore`, `search`, `init`, `pack`
 
-## 📦 包格式与打包
+#### 2. 核心库 (Old8Lang.PackageManager.Core)
+- **包源管理 (PackageSourceManager)**: 管理多个包源
+- **包安装器 (DefaultPackageInstaller)**: 负责包的安装、卸载
+- **依赖解析器 (DefaultPackageResolver)**: 智能依赖关系解析
+- **版本管理器 (VersionManager)**: 语义化版本控制
+- **包配置管理器**: 项目配置文件管理
 
-### 包结构
+#### 3. 服务端 (Old8Lang.PackageManager.Server)
+- **Web API**: RESTful 接口，支持包的 CRUD 操作
+- **多语言兼容**: PyPI、NPM API 兼容接口
+- **安全认证**: API 密钥、包签名验证
+- **存储管理**: 文件存储、数据库管理
 
-每个 Old8Lang 包采用 `.o8pkg` 格式，实际上是一个 ZIP 压缩包，包含以下结构：
+#### 4. Web 界面 (Frontend)
+- **Vue 3 + TypeScript**: 现代化前端框架
+- **响应式设计**: 适配桌面和移动设备
+- **实时交互**: 搜索、上传、下载实时反馈
+- **用户体验**: 流畅动画、错误处理
+
+## 🌐 多语言支持
+
+### 支持的语言和格式
+
+| 语言 | 包格式 | 配置文件 | 兼容接口 |
+|------|--------|----------|----------|
+| **Old8Lang** | `.o8pkg` | `o8packages.json` | Native API |
+| **Python** | `.whl`, `.tar.gz` | `requirements.txt`, `pyproject.toml` | PyPI Compatible |
+| **JavaScript** | `.tgz` | `package.json` | NPM Compatible |
+| **TypeScript** | `.tgz` | `package.json`, `tsconfig.json` | NPM Compatible |
+
+### 包管理器集成
+
+```bash
+# Python (pip)
+pip install requests --index-url https://packages.old8lang.org/simple
+
+# JavaScript (npm/yarn)
+npm install lodash --registry https://packages.old8lang.org/npm
+
+# Old8Lang (o8pm)
+o8pm add MyPackage 1.0.0
+```
+
+## 📦 包格式与结构
+
+### Old8Lang 包格式 (.o8pkg)
 
 ```
-MyPackage.1.0.0.o8pkg
+MyPackage.1.0.0.o8pkg (ZIP 格式)
 ├── package.json              # 包元数据
 ├── lib/                      # 编译后的库文件
 │   ├── old8lang-1.0/
@@ -32,12 +110,8 @@ MyPackage.1.0.0.o8pkg
 │   └── old8lang-1.1/
 │       └── MyPackage.o8
 ├── docs/                     # 文档文件
-│   ├── README.md
-│   └── api.md
 ├── examples/                 # 示例代码
-│   └── basic/
 └── tools/                    # 工具脚本
-    └── install.js
 ```
 
 ### package.json 元数据
@@ -50,10 +124,6 @@ MyPackage.1.0.0.o8pkg
   "author": "Developer Name",
   "license": "MIT",
   "homepage": "https://github.com/user/mypackage",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/user/mypackage.git"
-  },
   "keywords": ["utility", "tools", "old8lang"],
   "dependencies": [
     {
@@ -72,204 +142,167 @@ MyPackage.1.0.0.o8pkg
 }
 ```
 
-### 打包流程
-
-1. **准备源码**
-   ```bash
-   mkdir MyPackage
-   cd MyPackage
-   # 创建源码文件和目录结构
-   ```
-
-2. **编译项目**
-   ```bash
-   # 使用 Old8Lang 编译器
-   o8c build --framework old8lang-1.0 --output lib/old8lang-1.0/
-   ```
-
-3. **创建 package.json**
-   ```bash
-   # 手动创建或使用工具生成
-   o8pm init --id MyPackage --version 1.0.0
-   ```
-
-4. **打包**
-   ```bash
-   # 打包为 .o8pkg 文件
-   o8pm pack
-   # 生成: MyPackage.1.0.0.o8pkg
-   ```
-
-## 🌐 传输与分发
-
-### 包源类型
-
-#### 1. 本地包源
-```json
-{
-  "name": "Local Source",
-  "source": "./packages",
-  "type": "local"
-}
-```
-
-#### 2. HTTP 远程包源
-```json
-{
-  "name": "Official Repository",
-  "source": "https://packages.old8lang.org/v3/index.json",
-  "type": "http"
-}
-```
-
-#### 3. 包源索引文件 (index.json)
-```json
-{
-  "version": "3.0.0",
-  "resources": [
-    {
-      "@id": "https://packages.old8lang.org/v3/search",
-      "@type": "SearchQueryService",
-      "comment": "查询包服务"
-    },
-    {
-      "@id": "https://packages.old8lang.org/v3/package/{id}/index.json",
-      "@type": "PackageIndexService",
-      "comment": "包索引服务"
-    }
-  ]
-}
-```
-
-### 传输协议
-
-#### 1. HTTP/HTTPS API
-
-**搜索包**
-```http
-GET /v3/search?q=logger&skip=0&take=20
-```
-
-**获取包信息**
-```http
-GET /v3/package/{id}/index.json
-```
-
-**下载包**
-```http
-GET /v3/package/{id}/{version}/package.o8pkg
-```
-
-#### 2. 包元数据 API
-```json
-{
-  "versions": ["1.0.0", "1.1.0", "2.0.0"],
-  "items": [
-    {
-      "version": "1.0.0",
-      "packageContent": "https://packages.old8lang.org/v3/package/MyPackage/1.0.0/package.o8pkg",
-      "packageHash": "sha256:abc123...",
-      "publishedAt": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
-## 🔌 API 架构
-
-### 核心接口
-
-#### IPackageSource
-```csharp
-public interface IPackageSource
-{
-    string Name { get; }
-    string Source { get; }
-    bool IsEnabled { get; set; }
-    
-    Task<Package?> GetPackageMetadataAsync(string packageId, string version);
-    Task<Stream> DownloadPackageAsync(string packageId, string version);
-    Task<IEnumerable<Package>> SearchPackagesAsync(string searchTerm, int skip = 0, int take = 20);
-    Task<IEnumerable<string>> GetPackageVersionsAsync(string packageId);
-}
-```
-
-#### IPackageInstaller
-```csharp
-public interface IPackageInstaller
-{
-    Task<InstallResult> InstallPackageAsync(string packageId, string version, string installPath);
-    Task<bool> UninstallPackageAsync(string packageId, string version, string installPath);
-    Task<bool> IsPackageInstalledAsync(string packageId, string version, string installPath);
-    Task<IEnumerable<Package>> GetInstalledPackagesAsync(string installPath);
-}
-```
-
-#### IPackageResolver
-```csharp
-public interface IPackageResolver
-{
-    Task<ResolveResult> ResolveDependenciesAsync(string packageId, string version, IEnumerable<IPackageSource> sources);
-    Task<bool> CheckCompatibilityAsync(string packageVersion, string requiredVersionRange);
-    Task<DependencyGraph> BuildDependencyGraphAsync(string packageId, string version, IEnumerable<IPackageSource> sources);
-}
-```
-
-### HTTP 包源实现
-
-#### RemotePackageSource
-```csharp
-public class RemotePackageSource : IPackageSource
-{
-    private readonly HttpClient _httpClient;
-    private readonly string _baseUrl;
-    
-    public async Task<Stream> DownloadPackageAsync(string packageId, string version)
-    {
-        var url = $"{_baseUrl}/package/{packageId}/{version}/package.o8pkg";
-        var response = await _httpClient.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStreamAsync();
-    }
-    
-    public async Task<Package?> GetPackageMetadataAsync(string packageId, string version)
-    {
-        var url = $"{_baseUrl}/package/{packageId}/{version}/metadata.json";
-        var response = await _httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return null;
-        
-        var json = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<Package>(json);
-    }
-}
-```
-
 ## 🚀 快速开始
 
-### 安装配置
+### 环境要求
 
-1. **安装 o8pm**
-   ```bash
-   # 下载对应平台的二进制文件
-   curl -L https://github.com/old8lang/o8pm/releases/latest/download/o8pm-linux-x64 -o o8pm
-   chmod +x o8pm
-   sudo mv o8pm /usr/local/bin/
-   ```
+- **.NET 10.0 SDK** (开发环境)
+- **Node.js 18+** (前端开发)
+- **Docker & Docker Compose** (容器部署)
+- **Git**
 
-2. **初始化项目**
-   ```bash
-   # 创建新项目
-   mkdir MyOld8LangProject
-   cd MyOld8LangProject
-   
-   # 初始化包配置
-   o8pm init
-   # 生成 o8packages.json
-   ```
+### 本地开发环境
+
+#### 1. 克隆仓库
+
+```bash
+git clone https://github.com/old8lang/o8pm.git
+cd Old8Lang.PackageManager
+```
+
+#### 2. 后端开发
+
+```bash
+# 还原依赖
+dotnet restore
+
+# 构建解决方案
+dotnet build Old8Lang.PackageManager.sln
+
+# 运行服务端
+dotnet run --project Old8Lang.PackageManager.Server
+
+# 运行 CLI 工具
+dotnet run --project Old8Lang.PackageManager -- help
+```
+
+#### 3. 前端开发
+
+```bash
+cd frontend
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+```
+
+#### 4. 数据库初始化
+
+```bash
+# 运行数据库迁移
+dotnet ef database update --project Old8Lang.PackageManager.Server
+```
+
+### Docker 容器化部署
+
+#### 使用 Docker Compose (推荐)
+
+```bash
+# 启动所有服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+```
+
+#### 服务端口
+
+- **前端**: http://localhost:3000
+- **后端 API**: http://localhost:5000
+- **API 文档**: http://localhost:5000/swagger
+- **数据库**: localhost:1433 (SQL Server)
+- **缓存**: localhost:6379 (Redis)
+
+### 生产环境部署
+
+#### 1. 使用部署脚本
+
+```bash
+# 运行部署脚本
+./deploy.sh
+
+# 启动生产服务
+dotnet run --project Old8Lang.PackageManager.Server --configuration Release
+```
+
+#### 2. 手动部署
+
+```bash
+# 构建发布版本
+dotnet publish -c Release -o /var/www/o8pm
+
+# 配置 Nginx 反向代理
+sudo cp nginx.conf /etc/nginx/sites-available/o8pm
+sudo ln -s /etc/nginx/sites-available/o8pm /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+## 📡 API 接口
+
+### 核心 API
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| `GET` | `/v3/index.json` | 服务索引 |
+| `GET` | `/v3/search` | 搜索包 |
+| `GET` | `/v3/package/{id}` | 获取包信息 |
+| `POST` | `/v3/package` | 上传包 |
+| `GET` | `/v3/package/{id}/{version}/download` | 下载包 |
+| `DELETE` | `/v3/package/{id}/{version}` | 删除包 |
+
+### 多语言兼容接口
+
+#### PyPI 兼容接口
+
+```bash
+# 简单索引
+GET /simple/
+
+# 包版本列表
+GET /simple/{package}/
+
+# 包下载
+GET /simple/{package}/{filename}
+
+# JSON API
+GET /simple/pypi/{package}/json
+```
+
+#### NPM 兼容接口
+
+```bash
+# 包注册表
+GET /npm/
+
+# 包信息
+GET /npm/{package}
+
+# 包搜索
+GET /npm/-/v1/search?q={query}
+
+# 包发布
+PUT /npm/{package}
+```
+
+## 🔧 CLI 命令
 
 ### 基本命令
 
 ```bash
+# 初始化项目
+o8pm init
+
 # 添加包
 o8pm add MyPackage 1.0.0
 
@@ -282,230 +315,195 @@ o8pm restore
 # 搜索包
 o8pm search logger
 
-# 更新包
-o8pm update MyPackage
-
 # 列出已安装包
 o8pm list
-
-# 创建新包
-o8pm new MyPackage --template library
 
 # 打包项目
 o8pm pack
 
 # 发布包
-o8pm push MyPackage.1.0.0.o8pkg --source https://api.old8lang.org
+o8pm push MyPackage.1.0.0.o8pkg
 ```
 
-### 配置文件示例
+### 多语言命令
 
-项目根目录的 `o8packages.json` 文件：
+```bash
+# 按语言搜索
+o8pm search "http client" --language python
+o8pm search "utility" --language javascript
 
-```json
-{
-  "version": "1.0.0",
-  "projectName": "MyOld8LangProject",
-  "framework": "old8lang-1.0",
-  "installPath": "packages",
-  "sources": [
-    {
-      "name": "Old8Lang Official",
-      "source": "https://packages.old8lang.org/v3/index.json",
-      "isEnabled": true,
-      "type": "http"
-    },
-    {
-      "name": "Local Packages",
-      "source": "./local-packages",
-      "isEnabled": true,
-      "type": "local"
-    }
-  ],
-  "references": [
-    {
-      "packageId": "Logger",
-      "version": "1.2.0",
-      "isDevelopmentDependency": false,
-      "targetFramework": "old8lang-1.0"
-    },
-    {
-      "packageId": "HttpClient",
-      "version": ">=2.0.0",
-      "isDevelopmentDependency": false,
-      "targetFramework": "old8lang-1.0"
-    }
-  ],
-  "frameworkAssemblies": [
-    {
-      "name": "System.Core",
-      "version": "1.0.0"
-    }
-  ]
-}
+# 安装多语言包
+o8pm add requests==2.28.2 --language python
+o8pm add lodash@^4.17.21 --language javascript
+
+# 列出支持的语言
+o8pm languages
 ```
-
-## 🔧 高级功能
-
-### 1. 版本约束
-
-支持的版本范围语法：
-- `1.0.0` - 精确版本
-- `1.0.*` - 通配符版本
-- `>=1.0.0` - 最小版本
-- `<=2.0.0` - 最大版本
-- `>1.0.0 <2.0.0` - 范围版本
-- `~1.0.0` - 兼容版本 (>=1.0.0 <2.0.0)
-- `^1.0.0` - 主要版本兼容 (>=1.0.0 <2.0.0)
-
-### 2. 依赖解析算法
-
-采用回溯算法进行依赖解析：
-
-1. **收集依赖** - 递归收集所有直接和间接依赖
-2. **版本冲突检测** - 检测版本冲突并提供解决方案
-3. **最优版本选择** - 选择满足所有约束的最新版本
-4. **循环依赖检测** - 检测并报告循环依赖
-
-### 3. 缓存机制
-
-- **全局缓存**: `~/.o8pm/cache/` 存储下载的包
-- **项目缓存**: `./packages/cache/` 存储项目特定缓存
-- **元数据缓存**: 缓存包索引和搜索结果
-- **LRU 淘汰**: 基于最近最少使用的缓存清理策略
 
 ## 🔒 安全机制
 
-### 1. 包完整性验证
+### API 密钥认证
 
-```csharp
-public class PackageVerifier
-{
-    public async Task<bool> VerifyPackageAsync(string packagePath, string expectedChecksum)
-    {
-        using var stream = File.OpenRead(packagePath);
-        var hash = await ComputeSha256Async(stream);
-        return hash.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
-    }
-}
+支持多种认证方式：
+
+```bash
+# Authorization Header
+Authorization: Bearer <api_key>
+
+# 查询参数
+GET /v3/search?api_key=<api_key>
+
+# 自定义 Header
+X-API-Key: <api_key>
 ```
 
-### 2. 包签名（未来扩展）
+### 包完整性验证
 
-- 使用 RSA 或 ECDSA 数字签名
-- 信任链验证机制
-- 吊销列表支持
+- **SHA256/SHA512 哈希验证**
+- **包签名验证 (计划中)**
+- **依赖安全检查**
+- **恶意代码扫描 (计划中)**
 
 ## 📊 性能优化
 
-### 1. 并发下载
+### 缓存策略
 
-```csharp
-public async Task DownloadPackagesAsync(IEnumerable<PackageDependency> dependencies)
-{
-    var semaphore = new SemaphoreSlim(5); // 限制并发数
-    var tasks = dependencies.Select(async dep =>
-    {
-        await semaphore.WaitAsync();
-        try
-        {
-            return await DownloadSinglePackageAsync(dep);
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    });
-    
-    await Task.WhenAll(tasks);
-}
+- **多级缓存**: 内存缓存 + Redis 缓存
+- **LRU 淘汰**: 最近最少使用的缓存清理
+- **增量更新**: 基于文件修改时间的智能更新
+
+### 并发处理
+
+- **并发下载**: 支持最多 5 个并发下载
+- **连接池**: 数据库连接池管理
+- **异步处理**: 全面的 async/await 模式
+
+## 🧪 测试
+
+### 运行测试
+
+```bash
+# 运行所有测试
+dotnet test
+
+# 运行特定测试项目
+dotnet test Old8Lang.PackageManager.Tests
+
+# 运行前端测试
+cd frontend && npm run test
 ```
-
-### 2. 增量更新
-
-- 基于文件修改时间的智能更新
-- 差异下载支持
-- 压缩传输优化
-
-## 🧪 测试状态
 
 ### 测试覆盖情况
 
 - **✅ 核心功能测试**: 69/69 通过
   - Python包解析器: 25/25 通过 ✅
   - 简单多语言测试: 21/21 通过 ✅  
-  - 包存在性检查: 3/3 通过 ✅
   - 基础包管理: 20/20 通过 ✅
 
-- **🔧 集成测试**: 部分进行中
-  - HTTP API接口测试
-  - 多语言兼容性测试
-  - PyPI/NPM兼容性测试
+## 📈 项目结构
 
-### 测试运行
-
-```bash
-# 运行所有测试
-dotnet test
-
-# 运行核心功能测试
-dotnet test --filter "FullyQualifiedName~PythonPackageParserTests"
-dotnet test --filter "FullyQualifiedName~SimpleMultiLanguageTests"
-
-# 构建解决方案
-dotnet build Old8Lang.PackageManager.sln
-
-# 格式化代码
-dotnet format Old8Lang.PackageManager.sln
+```
+Old8Lang.PackageManager/
+├── Old8Lang.PackageManager/           # CLI 工具
+│   ├── Program.cs                      # 主程序入口
+│   └── Commands/                       # 命令实现
+├── Old8Lang.PackageManager.Core/       # 核心库
+│   ├── Services/                       # 核心服务
+│   ├── Interfaces/                     # 接口定义
+│   └── Models/                         # 数据模型
+├── Old8Lang.PackageManager.Server/     # 服务端
+│   ├── Controllers/                    # API 控制器
+│   ├── Services/                       # 业务服务
+│   ├── Data/                          # 数据访问
+│   └── Middleware/                     # 中间件
+├── Old8Lang.PackageManager.Tests/      # 测试项目
+├── frontend/                           # Web 界面
+│   ├── src/
+│   │   ├── views/                      # 页面组件
+│   │   ├── components/                 # 可复用组件
+│   │   ├── api/                        # API 客户端
+│   │   └── stores/                     # 状态管理
+│   └── dist/                          # 构建输出
+├── docker-compose.yml                  # Docker 编排
+├── deploy.sh                          # 部署脚本
+└── docs/                              # 文档
 ```
 
-## 🔮 未来扩展
+## 🔮 未来规划
 
-- [x] ✅ 多语言包支持 (Python & Old8Lang)
-- [x] ✅ 包解析器实现
-- [x] ✅ 基础测试框架
-- [ ] 包发布与版本管理平台
+### 短期目标 (3-6个月)
 - [ ] 包签名验证系统
 - [ ] 私有包源托管
-- [ ] 包分析工具
-- [ ] 依赖树可视化
-- [ ] 自动化包更新
+- [ ] PWA 离线支持
+- [ ] 国际化支持
+
+### 中期目标 (6-12个月)
+- [ ] 更多语言支持 (Java, Go, Rust)
 - [ ] 包质量评分系统
+- [ ] 依赖关系可视化
+- [ ] CI/CD 集成
 
-## 📈 与其他包管理器的对比
-
-| 特性 | npm | NuGet | pip | Old8Lang Package Manager |
-|------|-----|-------|-----|-------------------------|
-| 包格式 | .tgz | .nupkg | .whl | .o8pkg |
-| 版本管理 | SemVer | SemVer | PEP 440 | SemVer |
-| 依赖解析 | 递归 | 智能解析 | 基本解析 | 智能回溯解析 |
-| 多源支持 | 是 | 是 | 有限 | ✅ 完整支持 |
-| 私有源 | 是 | 是 | 有限 | ✅ 原生支持 |
-| 缓存机制 | 是 | 是 | 基本缓存 | ✅ 多级缓存 |
-| 签名验证 | 有限 | 是 | 有限 | ✅ 计划支持 |
+### 长期目标 (1-2年)
+- [ ] 跨语言依赖解析
+- [ ] 智能包推荐
+- [ ] 企业级权限管理
+- [ ] 全球 CDN 分发网络
 
 ## 🤝 贡献指南
 
-欢迎贡献代码！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
+### 开发流程
 
-### 开发环境搭建
+1. **Fork 项目** 到您的 GitHub 账户
+2. **创建功能分支**: `git checkout -b feature/amazing-feature`
+3. **提交更改**: `git commit -m 'Add some amazing feature'`
+4. **推送分支**: `git push origin feature/amazing-feature`
+5. **创建 Pull Request**
+
+### 代码规范
+
+- 遵循 C# 编码规范 (服务端)
+- 遵循 ESLint + Prettier 规范 (前端)
+- 添加单元测试覆盖新功能
+- 更新相关文档
+
+### 开发环境
 
 ```bash
-# 克隆仓库
-git clone https://github.com/old8lang/o8pm.git
-cd o8pm
+# 安装开发工具
+dotnet tool install -g dotnet-ef
+dotnet tool install -g dotnet-format
 
-# 还原依赖
-dotnet restore
+# 代码格式化
+dotnet format Old8Lang.PackageManager.sln
 
-# 构建项目
-dotnet build
-
-# 运行测试
-dotnet test
-
-# 运行示例
-dotnet run --project Old8Lang.PackageManager -- help
+# 检查代码规范
+dotnet build --no-restore
 ```
 
-这个包管理器成功地将成熟的包管理理念应用到了 Old8Lang 语言生态，为开发者提供了一个功能完整、性能优异、安全可靠的包管理解决方案。
+## 📄 许可证
+
+本项目采用 [MIT 许可证](LICENSE) - 欢迎自由使用和修改。
+
+## 🙏 致谢
+
+感谢以下开源项目：
+
+- **ASP.NET Core** - 现代化的 Web 框架
+- **Entity Framework Core** - 轻量级 ORM
+- **Vue.js** - 渐进式 JavaScript 框架
+- **Naive UI** - 优秀的 Vue 3 组件库
+- **Tailwind CSS** - 实用优先的 CSS 框架
+- **NuGet** - 包管理器设计的灵感来源
+
+## 📞 支持
+
+- **📖 文档**: [完整文档](./docs/)
+- **🐛 问题反馈**: [GitHub Issues](https://github.com/old8lang/o8pm/issues)
+- **💬 讨论区**: [GitHub Discussions](https://github.com/old8lang/o8pm/discussions)
+- **📧 邮箱**: team@old8lang.org
+
+---
+
+**开始使用 Old8Lang Package Manager，开启您的多语言包管理之旅！** 🎉
+
+如果这个项目对您有帮助，请给我们一个 ⭐️ Star！

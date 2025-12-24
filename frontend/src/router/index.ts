@@ -35,6 +35,27 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '上传包',
       description: '上传你的包到仓库',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/ProfileView.vue'),
+    meta: {
+      title: '个人中心',
+      description: '管理个人信息和包',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: {
+      title: '登录',
+      description: '登录到 Old8Lang 包管理器',
+      hideWhenAuthenticated: true,
     },
   },
   {

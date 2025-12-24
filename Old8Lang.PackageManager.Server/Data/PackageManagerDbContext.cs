@@ -12,13 +12,22 @@ public class PackageManagerDbContext : DbContext
     {
     }
     
-    public virtual DbSet<PackageEntity> Packages { get; set; }
-    public virtual DbSet<PackageTagEntity> PackageTags { get; set; }
-    public virtual DbSet<PackageDependencyEntity> PackageDependencies { get; set; }
-    public virtual DbSet<PackageFileEntity> PackageFiles { get; set; }
-    public virtual DbSet<ApiKeyEntity> ApiKeys { get; set; }
-    public virtual DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; }
-    public virtual DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; }
+    public virtual DbSet<PackageEntity> Packages { get; set; } = null!;
+    public virtual DbSet<PackageTagEntity> PackageTags { get; set; } = null!;
+    public virtual DbSet<PackageDependencyEntity> PackageDependencies { get; set; } = null!;
+    public virtual DbSet<PackageFileEntity> PackageFiles { get; set; } = null!;
+    public virtual DbSet<ApiKeyEntity> ApiKeys { get; set; } = null!;
+    public virtual DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; } = null!;
+    public virtual DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; } = null!;
+    
+    // 用户相关表
+    public virtual DbSet<UserEntity> Users { get; set; } = null!;
+    public virtual DbSet<UserExternalLoginEntity> UserExternalLogins { get; set; } = null!;
+    public virtual DbSet<RefreshTokenEntity> RefreshTokens { get; set; } = null!;
+    public virtual DbSet<UserSessionEntity> UserSessions { get; set; } = null!;
+    public virtual DbSet<UserRoleEntity> UserRoles { get; set; } = null!;
+    public virtual DbSet<UserRoleMappingEntity> UserRoleMappings { get; set; } = null!;
+    public virtual DbSet<UserActivityLogEntity> UserActivityLogs { get; set; } = null!;
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -114,6 +123,140 @@ public class PackageManagerDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
             
             entity.HasIndex(e => new { e.PackageEntityId, e.Language }).IsUnique();
+        });
+        
+        // UserEntity 配置
+        modelBuilder.Entity<UserEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.PasswordHash).HasMaxLength(500);
+            entity.Property(e => e.DisplayName).HasMaxLength(200);
+            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
+            entity.Property(e => e.Bio).HasMaxLength(1000);
+            entity.Property(e => e.WebsiteUrl).HasMaxLength(500);
+            entity.Property(e => e.Company).HasMaxLength(500);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            entity.Property(e => e.SubjectId).HasMaxLength(100);
+            entity.Property(e => e.Provider).HasMaxLength(100);
+            entity.Property(e => e.ProviderDisplayName).HasMaxLength(500);
+            entity.Property(e => e.PreferredLanguage).HasMaxLength(50);
+            
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.SubjectId).IsUnique();
+            entity.HasIndex(e => e.Provider);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+        
+        // UserExternalLoginEntity 配置
+        modelBuilder.Entity<UserExternalLoginEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ProviderKey).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.ProviderDisplayName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.SubjectId).HasMaxLength(100);
+            entity.Property(e => e.ProviderData).HasMaxLength(1000);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.ExternalLogins)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(e => new { e.Provider, e.ProviderKey }).IsUnique();
+        });
+        
+        // RefreshTokenEntity 配置
+        modelBuilder.Entity<RefreshTokenEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.JwtId).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.RevokedReason).HasMaxLength(100);
+            entity.Property(e => e.IpAddress).HasMaxLength(200);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.RefreshTokens)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.JwtId).IsUnique();
+            entity.HasIndex(e => e.ExpiresAt);
+        });
+        
+        // UserSessionEntity 配置
+        modelBuilder.Entity<UserSessionEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SessionId).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.Country).HasMaxLength(100);
+            entity.Property(e => e.City).HasMaxLength(100);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.UserSessions)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(e => e.SessionId).IsUnique();
+            entity.HasIndex(e => e.ExpiresAt);
+        });
+        
+        // UserRoleEntity 配置
+        modelBuilder.Entity<UserRoleEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RoleName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+            
+            entity.HasIndex(e => e.RoleName).IsUnique();
+        });
+        
+        // UserRoleMappingEntity 配置
+        modelBuilder.Entity<UserRoleMappingEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(e => e.Role)
+                  .WithMany(r => r.UserMappings)
+                  .HasForeignKey(e => e.RoleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(e => e.AssignedByUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.AssignedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+        
+        // UserActivityLogEntity 配置
+        modelBuilder.Entity<UserActivityLogEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ActivityType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.IpAddress).HasMaxLength(200);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.Metadata).HasMaxLength(2000);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ActivityType);
+            entity.HasIndex(e => e.CreatedAt);
         });
         
         // 数据种子
