@@ -34,7 +34,7 @@ public class Old8LangAdapter : ILanguageAdapter
             return false;
 
         // 检查是否有 package.json
-        var packageJsonPath = Path.Combine(packagePath, "package.json");
+        var packageJsonPath = Path.Combine(packagePath, "o8packages.json");
         if (!File.Exists(packageJsonPath))
             return false;
 
@@ -53,7 +53,7 @@ public class Old8LangAdapter : ILanguageAdapter
     /// <returns></returns>
     public async Task<PackageMetadata?> ExtractMetadataAsync(string packagePath)
     {
-        var packageJsonPath = Path.Combine(packagePath, "package.json");
+        var packageJsonPath = Path.Combine(packagePath, "o8packages.json");
         if (!File.Exists(packageJsonPath))
             return null;
 

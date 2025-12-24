@@ -299,20 +299,6 @@ public class PackagesController(
         return null;
     }
 
-    /// <summary>
-    /// 获取当前用户 ID
-    /// </summary>
-    private int? GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
-        {
-            return userId;
-        }
-
-        return null;
-    }
-
     private async Task<Stream?> GetPackageFileStreamAsync(string packageId, string version)
     {
         // 这里应该调用包存储服务获取文件流
@@ -340,28 +326,28 @@ public class ServiceIndexController(ApiOptions apiOptions) : ControllerBase
             Version = apiOptions.Version,
             Resources =
             [
-                new()
+                new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/search",
                     Type = "SearchQueryService",
                     Comment = "查询包服务"
                 },
 
-                new()
+                new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}",
                     Type = "PackageIndexService",
                     Comment = "包索引服务"
                 },
 
-                new()
+                new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}/{{version}}/download",
                     Type = "PackageDownloadService",
                     Comment = "包下载服务"
                 },
 
-                new()
+                new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package",
                     Type = "PackagePublishService",
