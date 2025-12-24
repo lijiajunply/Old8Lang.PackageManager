@@ -13,22 +13,12 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/auth")]
-public class AuthController : ControllerBase
+public class AuthController(
+    PackageManagerDbContext dbContext,
+    UserService userService,
+    ILogger<AuthController> logger)
+    : ControllerBase
 {
-    private readonly PackageManagerDbContext _dbContext;
-    private readonly UserService _userService;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(
-        PackageManagerDbContext dbContext,
-        UserService userService,
-        ILogger<AuthController> logger)
-    {
-        _dbContext = dbContext;
-        _userService = userService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// 获取当前用户信息
     /// </summary>
@@ -42,13 +32,13 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Invalid user ID" });
         }
 
-        var user = await _userService.GetUserByIdAsync(userId);
+        var user = await userService.GetUserByIdAsync(userId);
         if (user == null)
         {
             return NotFound(new { error = "User not found" });
         }
 
-        var externalLogins = await _userService.GetUserExternalLoginsAsync(userId);
+        var externalLogins = await userService.GetUserExternalLoginsAsync(userId);
 
         return Ok(new
         {
@@ -97,11 +87,12 @@ public class AuthController : ControllerBase
     [HttpGet("providers")]
     public IActionResult GetAuthProviders()
     {
-        var config = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+        var config = HttpContext.RequestServices
+            .GetRequiredService<IConfiguration>();
         var oidcConfig = config.GetSection("Authentication:OIDC");
-        
+
         var providers = new List<object>();
-        
+
         foreach (var provider in oidcConfig.GetSection("Providers").GetChildren())
         {
             var enabled = provider.GetValue<bool>("Enabled");
@@ -155,13 +146,13 @@ public class AuthController : ControllerBase
         }
 
         // 更新用户最后登录时间
-        var user = await _userService.GetUserByIdAsync(userId);
+        var user = await userService.GetUserByIdAsync(userId);
         if (user != null)
         {
             user.LastLoginAt = DateTime.UtcNow;
-            await _dbContext.SaveChangesAsync();
-            
-            _logger.LogInformation("User {UserId} ({Username}) logged in successfully", user.Id, user.Username);
+            await dbContext.SaveChangesAsync();
+
+            logger.LogInformation("User {UserId} ({Username}) logged in successfully", user.Id, user.Username);
         }
 
         return LocalRedirect(returnUrl ?? "/");

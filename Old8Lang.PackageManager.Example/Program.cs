@@ -1,6 +1,5 @@
 using Old8Lang.PackageManager.Core.Commands;
 using Old8Lang.PackageManager.Core.Services;
-using Old8Lang.PackageManager.Core.Interfaces;
 
 // 创建核心服务
 var sourceManager = new PackageSourceManager();

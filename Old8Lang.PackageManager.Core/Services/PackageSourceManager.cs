@@ -8,7 +8,7 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// </summary>
 public class PackageSourceManager
 {
-    private readonly List<IPackageSource> _sources = new();
+    private readonly List<IPackageSource> _sources = [];
     
     /// <summary>
     /// 添加包源

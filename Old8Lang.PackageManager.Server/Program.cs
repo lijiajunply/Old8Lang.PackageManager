@@ -19,17 +19,13 @@ switch (dbProvider.ToUpperInvariant())
 {
     case "POSTGRESQL":
         // 先添加 Npgsql 包，暂时注释掉
-        // builder.Services.AddDbContext<PackageManagerDbContext>(options =>
-        //     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
         builder.Services.AddDbContext<PackageManagerDbContext>(options =>
-            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
         break;
     case "SQLSERVER":
         // 先添加 SqlServer 包，暂时注释掉
-        // builder.Services.AddDbContext<PackageManagerDbContext>(options =>
-        //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         builder.Services.AddDbContext<PackageManagerDbContext>(options =>
-            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         break;
     default:
         builder.Services.AddDbContext<PackageManagerDbContext>(options =>
@@ -77,8 +73,8 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
@@ -124,7 +120,7 @@ app.Use(async (context, next) =>
     // 添加自定义响应头
     context.Response.Headers["X-Powered-By"] = "Old8Lang Package Manager";
     context.Response.Headers["X-API-Version"] = "3.0.0";
-    
+
     await next();
 });
 
@@ -132,8 +128,9 @@ app.Use(async (context, next) =>
 app.MapControllers();
 
 // 健康检查
-app.MapGet("/health", () => Results.Ok(new { 
-    status = "healthy", 
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
     timestamp = DateTime.UtcNow,
     version = "1.0.0"
 })).WithName("HealthCheck");

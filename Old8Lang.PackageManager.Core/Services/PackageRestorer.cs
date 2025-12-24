@@ -12,6 +12,12 @@ public class PackageRestorer
     private readonly IPackageInstaller _installer;
     private readonly PackageSourceManager _sourceManager;
     
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    /// <param name="configManager"></param>
+    /// <param name="installer"></param>
+    /// <param name="sourceManager"></param>
     public PackageRestorer(
         IPackageConfigurationManager configManager,
         IPackageInstaller installer,

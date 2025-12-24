@@ -97,11 +97,11 @@ public class NpmController(
                         license = package.License,
                         homepage = package.ProjectUrl,
                         main = GetLanguageMetadataValue(package, "main", "index.js"),
-                        types = GetLanguageMetadataValue(package, "types", ""),
-                        module = GetLanguageMetadataValue(package, "module", ""),
-                        files = GetLanguageMetadataValue(package, "files", "")
+                        types = GetLanguageMetadataValue(package, "types"),
+                        module = GetLanguageMetadataValue(package, "module"),
+                        files = GetLanguageMetadataValue(package, "files")
                             .Split(',', StringSplitOptions.RemoveEmptyEntries),
-                        engines = ParseEngines(GetLanguageMetadataValue(package, "engines", "")),
+                        engines = ParseEngines(GetLanguageMetadataValue(package, "engines")),
                         dependencies =
                             ParseExternalDependencies(package.ExternalDependencies.Where(d => !d.IsDevDependency)),
                         devDependencies =
@@ -291,7 +291,7 @@ public class NpmController(
     /// 解析 package.json 文件
     /// </summary>
     [HttpPost("parse-package-json")]
-    public async Task<IActionResult> ParsePackageJson(IFormFile packageJsonFile)
+    public async Task<IActionResult> ParsePackageJson(IFormFile? packageJsonFile)
     {
         try
         {
@@ -300,7 +300,7 @@ public class NpmController(
                 return BadRequest(new { error = "package.json file is required" });
             }
 
-            using var stream = packageJsonFile.OpenReadStream();
+            await using var stream = packageJsonFile.OpenReadStream();
             var dependencies = await jsParser.ParsePackageJsonAsync(stream);
 
             return Ok(new ApiResponse<List<ExternalDependencyInfo>>
@@ -326,7 +326,7 @@ public class NpmController(
     /// 验证 JS/TS 包
     /// </summary>
     [HttpPost("validate-package")]
-    public async Task<IActionResult> ValidateJavaScriptPackage(IFormFile packageFile)
+    public async Task<IActionResult> ValidateJavaScriptPackage(IFormFile? packageFile)
     {
         try
         {
@@ -335,7 +335,7 @@ public class NpmController(
                 return BadRequest(new { error = "Package file is required" });
             }
 
-            using var stream = packageFile.OpenReadStream();
+            await using var stream = packageFile.OpenReadStream();
             var isValid = await jsParser.ValidateJavaScriptPackageAsync(stream);
 
             return Ok(new ApiResponse<bool>
@@ -403,9 +403,9 @@ public class NpmController(
             try
             {
                 var metadataDict = JsonSerializer.Deserialize<Dictionary<string, object>>(metadata.Metadata);
-                if (metadataDict?.ContainsKey(key) == true)
+                if (metadataDict?.TryGetValue(key, out var value) is true)
                 {
-                    return metadataDict[key].ToString() ?? defaultValue;
+                    return value.ToString() ?? defaultValue;
                 }
             }
             catch
@@ -438,7 +438,7 @@ public class NpmController(
         return dependencies.ToDictionary(d => d.PackageName, d => d.VersionSpec);
     }
 
-    private string GetScope(string packageName)
+    private string? GetScope(string packageName)
     {
         if (packageName.StartsWith("@"))
         {

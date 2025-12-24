@@ -8,12 +8,26 @@ namespace Old8Lang.PackageManager.Core.Adapters;
 /// </summary>
 public class Old8LangAdapter : ILanguageAdapter
 {
+    /// <summary>
+    /// 语言名称
+    /// </summary>
     public string LanguageName => "old8lang";
 
+    /// <summary>
+    /// 支持的文件扩展名
+    /// </summary>
     public IEnumerable<string> SupportedFileExtensions => new[] { ".o8", ".old8", ".ol" };
 
+    /// <summary>
+    /// 包配置文件名
+    /// </summary>
     public string ConfigurationFileName => "o8packages.json";
 
+    /// <summary>
+    /// 验证包格式
+    /// </summary>
+    /// <param name="packagePath"></param>
+    /// <returns></returns>
     public bool ValidatePackageFormat(string packagePath)
     {
         if (!Directory.Exists(packagePath))
@@ -32,6 +46,11 @@ public class Old8LangAdapter : ILanguageAdapter
         return mainFiles.Count > 0;
     }
 
+    /// <summary>
+    /// 提取包元数据
+    /// </summary>
+    /// <param name="packagePath"></param>
+    /// <returns></returns>
     public async Task<PackageMetadata?> ExtractMetadataAsync(string packagePath)
     {
         var packageJsonPath = Path.Combine(packagePath, "package.json");
@@ -81,6 +100,11 @@ public class Old8LangAdapter : ILanguageAdapter
         }
     }
 
+    /// <summary>
+    /// 包安装后的操作
+    /// </summary>
+    /// <param name="packagePath"></param>
+    /// <returns></returns>
     public Task OnPackageInstalledAsync(string packagePath)
     {
         // Old8Lang 包安装后的操作（如果需要）
@@ -88,6 +112,11 @@ public class Old8LangAdapter : ILanguageAdapter
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 包卸载前的操作
+    /// </summary>
+    /// <param name="packagePath"></param>
+    /// <returns></returns>
     public Task OnPackageUninstallingAsync(string packagePath)
     {
         // Old8Lang 包卸载前的操作（如果需要）

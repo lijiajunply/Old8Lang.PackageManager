@@ -6,6 +6,7 @@ namespace Old8Lang.PackageManager.Server.Models;
 /// <summary>
 /// 包搜索结果
 /// </summary>
+[Serializable]
 public class PackageSearchResult
 {
     public string PackageId { get; set; } = string.Empty;
@@ -22,6 +23,7 @@ public class PackageSearchResult
 /// <summary>
 /// 包搜索响应
 /// </summary>
+[Serializable]
 public class PackageSearchResponse
 {
     public int TotalHits { get; set; }
@@ -31,6 +33,7 @@ public class PackageSearchResponse
 /// <summary>
 /// 包详细信息响应
 /// </summary>
+[Serializable]
 public class PackageDetailResponse
 {
     public string PackageId { get; set; } = string.Empty;
@@ -57,6 +60,7 @@ public class PackageDetailResponse
 /// <summary>
 /// 包版本信息
 /// </summary>
+[Serializable]
 public class PackageVersionInfo
 {
     public string Version { get; set; } = string.Empty;
@@ -70,6 +74,7 @@ public class PackageVersionInfo
 /// <summary>
 /// 包上传请求
 /// </summary>
+[Serializable]
 public class PackageUploadRequest
 {
     public IFormFile PackageFile { get; set; } = null!;
@@ -87,6 +92,7 @@ public class PackageUploadRequest
 /// <summary>
 /// 外部依赖信息
 /// </summary>
+[Serializable]
 public class ExternalDependencyInfo
 {
     public string DependencyType { get; set; } = string.Empty; // pip, conda, npm, etc.
@@ -100,6 +106,7 @@ public class ExternalDependencyInfo
 /// <summary>
 /// API 响应基类
 /// </summary>
+[Serializable]
 public class ApiResponse<T>
 {
     public bool Success { get; set; }
@@ -107,8 +114,8 @@ public class ApiResponse<T>
     public T? Data { get; set; }
     public string? ErrorCode { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    
-    public static ApiResponse<T> SuccessResult(T data, string message = "操作成功")
+
+    public static ApiResponse<T> SuccessResult(T? data, string message = "操作成功")
     {
         return new ApiResponse<T>
         {
@@ -117,7 +124,7 @@ public class ApiResponse<T>
             Data = data
         };
     }
-    
+
     public static ApiResponse<T> ErrorResult(string message, string? errorCode = null)
     {
         return new ApiResponse<T>
@@ -132,6 +139,7 @@ public class ApiResponse<T>
 /// <summary>
 /// 包源服务资源
 /// </summary>
+[Serializable]
 public class ServiceResource
 {
     public string Id { get; set; } = string.Empty;
@@ -142,6 +150,7 @@ public class ServiceResource
 /// <summary>
 /// 包源索引响应
 /// </summary>
+[Serializable]
 public class ServiceIndexResponse
 {
     public string Version { get; set; } = "3.0.0";

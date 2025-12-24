@@ -48,7 +48,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("搜索包失败"));
         }
     }
-    
+
     /// <summary>
     /// 获取热门包
     /// </summary>
@@ -70,7 +70,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取热门包失败"));
         }
     }
-    
+
     /// <summary>
     /// 获取包详细信息
     /// </summary>
@@ -86,7 +86,7 @@ public class PackagesController(
         try
         {
             PackageDetailResponse? result;
-            
+
             if (!string.IsNullOrEmpty(version))
             {
                 result = await searchService.GetPackageDetailsAsync(id, version, language);
@@ -95,12 +95,12 @@ public class PackagesController(
             {
                 result = await searchService.GetPackageDetailsAsync(id, language);
             }
-            
+
             if (result == null)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
             }
-            
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -109,7 +109,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("获取包详细信息失败"));
         }
     }
-    
+
     /// <summary>
     /// 上传包
     /// </summary>
@@ -128,37 +128,37 @@ public class PackagesController(
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
                 }
-                
+
                 var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
                 }
-                
+
                 // 检查权限
                 if (!keyEntity.Scopes.Contains("package:write"))
                 {
                     return Forbid();
                 }
             }
-            
+
             // 验证文件
-            if (request.PackageFile == null || request.PackageFile.Length == 0)
+            if (request.PackageFile.Length == 0)
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("未提供包文件", "NO_PACKAGE_FILE"));
             }
-            
+
             // 验证文件扩展名
             var fileExtension = Path.GetExtension(request.PackageFile.FileName).ToLowerInvariant();
             if (fileExtension != ".o8pkg")
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("不支持的文件格式", "INVALID_FILE_FORMAT"));
             }
-            
+
             // 上传包
             await using var packageStream = request.PackageFile.OpenReadStream();
             var packageEntity = await packageService.UploadPackageAsync(request, packageStream);
-            
+
             var response = new PackageDetailResponse
             {
                 PackageId = packageEntity.PackageId,
@@ -183,7 +183,7 @@ public class PackagesController(
                 IsPrerelease = packageEntity.IsPrerelease,
                 Versions = new List<PackageVersionInfo>()
             };
-            
+
             return CreatedAtAction(nameof(GetPackageDetails), new { id = packageEntity.PackageId }, response);
         }
         catch (InvalidOperationException ex)
@@ -197,7 +197,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("包上传失败"));
         }
     }
-    
+
     /// <summary>
     /// 删除包
     /// </summary>
@@ -216,26 +216,26 @@ public class PackagesController(
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
                 }
-                
+
                 var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
                     return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
                 }
-                
+
                 // 检查权限
                 if (!keyEntity.Scopes.Contains("package:write"))
                 {
                     return Forbid();
                 }
             }
-            
+
             var result = await packageService.DeletePackageAsync(id, version);
             if (!result)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
             }
-            
+
             return Ok(ApiResponse<object>.SuccessResult(null, "包删除成功"));
         }
         catch (Exception ex)
@@ -244,7 +244,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("删除包失败"));
         }
     }
-    
+
     /// <summary>
     /// 下载包
     /// </summary>
@@ -260,17 +260,17 @@ public class PackagesController(
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
             }
-            
+
             // 获取包文件流
             var packageStream = await GetPackageFileStreamAsync(id, version);
             if (packageStream == null)
             {
                 return NotFound(ApiResponse<object>.ErrorResult("包文件不存在", "PACKAGE_FILE_NOT_FOUND"));
             }
-            
+
             // 增加下载计数
             await packageService.IncrementDownloadCountAsync(id, version);
-            
+
             var fileName = $"{id}.{version}.o8pkg";
             return File(packageStream, "application/octet-stream", fileName);
         }
@@ -280,7 +280,7 @@ public class PackagesController(
             return StatusCode(500, ApiResponse<object>.ErrorResult("下载包失败"));
         }
     }
-    
+
     private string? GetApiKeyFromRequest()
     {
         // 从 Authorization header 获取
@@ -289,13 +289,13 @@ public class PackagesController(
         {
             return authHeader["Bearer ".Length..];
         }
-        
+
         // 从查询参数获取
         if (Request.Query.TryGetValue("api_key", out var apiKey))
         {
             return apiKey.FirstOrDefault();
         }
-        
+
         return null;
     }
 
@@ -309,9 +309,10 @@ public class PackagesController(
         {
             return userId;
         }
+
         return null;
     }
-    
+
     private async Task<Stream?> GetPackageFileStreamAsync(string packageId, string version)
     {
         // 这里应该调用包存储服务获取文件流
@@ -325,54 +326,50 @@ public class PackagesController(
 /// </summary>
 [ApiController]
 [Route("v3/index.json")]
-public class ServiceIndexController : ControllerBase
+public class ServiceIndexController(ApiOptions apiOptions) : ControllerBase
 {
-    private readonly ApiOptions _apiOptions;
-    
-    public ServiceIndexController(ApiOptions apiOptions)
-    {
-        _apiOptions = apiOptions;
-    }
-    
     /// <summary>
     /// 获取服务索引
     /// </summary>
     [HttpGet]
     public ActionResult<ServiceIndexResponse> GetServiceIndex()
     {
-        var baseUrl = _apiOptions.BaseUrl.TrimEnd('/');
+        var baseUrl = apiOptions.BaseUrl.TrimEnd('/');
         var response = new ServiceIndexResponse
         {
-            Version = _apiOptions.Version,
-            Resources = new List<ServiceResource>
-            {
+            Version = apiOptions.Version,
+            Resources =
+            [
                 new()
                 {
                     Id = $"{baseUrl}/v3/search",
                     Type = "SearchQueryService",
                     Comment = "查询包服务"
                 },
+
                 new()
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}",
                     Type = "PackageIndexService",
                     Comment = "包索引服务"
                 },
+
                 new()
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}/{{version}}/download",
                     Type = "PackageDownloadService",
                     Comment = "包下载服务"
                 },
+
                 new()
                 {
                     Id = $"{baseUrl}/v3/package",
                     Type = "PackagePublishService",
                     Comment = "包发布服务"
                 }
-            }
+            ]
         };
-        
+
         return Ok(response);
     }
 }

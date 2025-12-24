@@ -280,19 +280,17 @@ Old8Lang.PackageManager.Core
 │   ├── IPackageSource       # 包源接口
 │   ├── IPackageResolver     # 解析器接口
 │   ├── IPackageInstaller    # 安装器接口
-│   └── IPackageConfigurationManager
+│   └── IPackageConfigurationManager # 配置管理接口
 ├── Services/                # 默认实现
 │   ├── LocalPackageSource   # 本地包源
-│   ├── DefaultPackageResolver
-│   ├── DefaultPackageInstaller
-│   ├── PackageSourceManager
+│   ├── DefaultPackageResolver # 解析器
+│   ├── DefaultPackageInstaller # 安装器
+│   ├── PackageSourceManager # 包源管理
 │   └── VersionManager       # 版本管理
 ├── Models/                  # 数据模型
 │   ├── Package              # 包模型
 │   ├── PackageConfiguration # 配置模型
 │   └── PackageDependency    # 依赖模型
-└── Commands/                # 命令模式
-    └── PackageCommands      # 包管理命令
 ```
 
 ## 🔌 扩展点

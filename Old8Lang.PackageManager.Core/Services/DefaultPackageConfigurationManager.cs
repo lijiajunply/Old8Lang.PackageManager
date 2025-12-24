@@ -9,6 +9,12 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// </summary>
 public class DefaultPackageConfigurationManager : IPackageConfigurationManager
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configPath"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public async Task<PackageConfiguration> ReadConfigurationAsync(string configPath)
     {
         if (!File.Exists(configPath))
@@ -37,6 +43,12 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configPath"></param>
+    /// <param name="configuration"></param>
+    /// <returns></returns>
     public async Task<bool> WriteConfigurationAsync(string configPath, PackageConfiguration configuration)
     {
         try
@@ -62,6 +74,13 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configPath"></param>
+    /// <param name="packageId"></param>
+    /// <param name="version"></param>
+    /// <returns></returns>
     public async Task<bool> AddPackageReferenceAsync(string configPath, string packageId, string version)
     {
         try
@@ -94,6 +113,12 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configPath"></param>
+    /// <param name="packageId"></param>
+    /// <returns></returns>
     public async Task<bool> RemovePackageReferenceAsync(string configPath, string packageId)
     {
         try
@@ -118,6 +143,11 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configPath"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<PackageReference>> GetPackageReferencesAsync(string configPath)
     {
         try

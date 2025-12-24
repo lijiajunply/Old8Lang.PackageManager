@@ -41,8 +41,17 @@ public class PackageConfiguration
 /// </summary>
 public class PackageSource
 {
+    /// <summary>
+    /// 名称
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>
+    /// 源
+    /// </summary>
     public string Source { get; set; } = string.Empty;
+    /// <summary>
+    /// 是否启用
+    /// </summary>
     public bool IsEnabled { get; set; } = true;
 }
 
@@ -51,8 +60,20 @@ public class PackageSource
 /// </summary>
 public class PackageReference
 {
+    /// <summary>
+    /// 包ID
+    /// </summary>
     public string PackageId { get; set; } = string.Empty;
+    /// <summary>
+    /// 版本
+    /// </summary>
     public string Version { get; set; } = string.Empty;
+    /// <summary>
+    /// 是否为开发依赖
+    /// </summary>
     public bool IsDevelopmentDependency { get; set; } = false;
+    /// <summary>
+    /// 目标框架
+    /// </summary>
     public string? TargetFramework { get; set; }
 }

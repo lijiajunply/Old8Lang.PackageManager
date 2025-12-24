@@ -5,6 +5,7 @@ namespace Old8Lang.PackageManager.Server.Models;
 /// <summary>
 /// 用户实体
 /// </summary>
+[Serializable]
 public class UserEntity
 {
     public int Id { get; set; }
@@ -93,6 +94,7 @@ public class UserEntity
 /// <summary>
 /// 外部登录实体
 /// </summary>
+[Serializable]
 public class UserExternalLoginEntity
 {
     public int Id { get; set; }
@@ -168,6 +170,7 @@ public class RefreshTokenEntity
 /// <summary>
 /// 用户会话实体
 /// </summary>
+[Serializable]
 public class UserSessionEntity
 {
     public int Id { get; set; }
@@ -209,6 +212,7 @@ public class UserSessionEntity
 /// <summary>
 /// 用户角色实体
 /// </summary>
+[Serializable]
 public class UserRoleEntity
 {
     public int Id { get; set; }
@@ -232,6 +236,7 @@ public class UserRoleEntity
 /// <summary>
 /// 用户角色映射实体
 /// </summary>
+[Serializable]
 public class UserRoleMappingEntity
 {
     public int Id { get; set; }
@@ -260,6 +265,7 @@ public class UserRoleMappingEntity
 /// <summary>
 /// 用户活动日志实体
 /// </summary>
+[Serializable]
 public class UserActivityLogEntity
 {
     public int Id { get; set; }

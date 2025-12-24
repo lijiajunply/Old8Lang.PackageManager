@@ -10,39 +10,39 @@ public class VersionManager
     /// <summary>
     /// 比较两个版本字符串
     /// </summary>
-    /// <returns>-1 if version1 < version2, 0 if equal, 1 if version1 > version2</returns>
+    /// <returns>-1 if version1 &lt; version2, 0 if equal, 1 if version1 > version2</returns>
     public int CompareVersions(string version1, string version2)
     {
         var v1 = ParseVersion(version1);
         var v2 = ParseVersion(version2);
-        
+
         // 比较主版本
         if (v1.Major != v2.Major)
             return v1.Major.CompareTo(v2.Major);
-        
+
         // 比较次版本
         if (v1.Minor != v2.Minor)
             return v1.Minor.CompareTo(v2.Minor);
-        
+
         // 比较修订版本
         if (v1.Patch != v2.Patch)
             return v1.Patch.CompareTo(v2.Patch);
-        
+
         // 比较预发布标识符
         if (v1.IsPrerelease && !v2.IsPrerelease)
             return -1; // 预发布版本小于正式版本
-        
+
         if (!v1.IsPrerelease && v2.IsPrerelease)
-            return 1;  // 正式版本大于预发布版本
-        
+            return 1; // 正式版本大于预发布版本
+
         if (v1.IsPrerelease && v2.IsPrerelease)
         {
             return string.Compare(v1.Prerelease, v2.Prerelease, StringComparison.OrdinalIgnoreCase);
         }
-        
+
         return 0;
     }
-    
+
     /// <summary>
     /// 检查版本是否在指定范围内
     /// </summary>
@@ -50,13 +50,13 @@ public class VersionManager
     {
         var range = ParseVersionRange(versionRange);
         var targetVersion = ParseVersion(version);
-        
+
         // 检查最小版本
         if (!string.IsNullOrEmpty(range.MinVersion))
         {
             var minVersion = ParseVersion(range.MinVersion);
             var minComparison = CompareVersions(version, range.MinVersion);
-            
+
             if (range.IncludeMinVersion)
             {
                 if (minComparison < 0) return false;
@@ -66,12 +66,12 @@ public class VersionManager
                 if (minComparison <= 0) return false;
             }
         }
-        
+
         // 检查最大版本
         if (!string.IsNullOrEmpty(range.MaxVersion))
         {
             var maxComparison = CompareVersions(version, range.MaxVersion);
-            
+
             if (range.IncludeMaxVersion)
             {
                 if (maxComparison > 0) return false;
@@ -81,10 +81,10 @@ public class VersionManager
                 if (maxComparison >= 0) return false;
             }
         }
-        
+
         return true;
     }
-    
+
     /// <summary>
     /// 获取范围内的最新版本
     /// </summary>
@@ -95,7 +95,7 @@ public class VersionManager
             .OrderByDescending(v => v, new VersionComparer())
             .FirstOrDefault();
     }
-    
+
     /// <summary>
     /// 解析版本字符串为结构化版本
     /// </summary>
@@ -103,42 +103,42 @@ public class VersionManager
     {
         if (string.IsNullOrWhiteSpace(version))
             return new SemanticVersion();
-        
+
         var parts = version.Split('-', 2);
         var versionPart = parts[0];
         var prereleasePart = parts.Length > 1 ? parts[1] : string.Empty;
-        
+
         var versionNumbers = versionPart.Split('.');
         var semanticVersion = new SemanticVersion
         {
             IsPrerelease = !string.IsNullOrEmpty(prereleasePart),
             Prerelease = prereleasePart
         };
-        
+
         if (versionNumbers.Length > 0 && int.TryParse(versionNumbers[0], out var major))
             semanticVersion.Major = major;
-        
+
         if (versionNumbers.Length > 1 && int.TryParse(versionNumbers[1], out var minor))
             semanticVersion.Minor = minor;
-        
+
         if (versionNumbers.Length > 2 && int.TryParse(versionNumbers[2], out var patch))
             semanticVersion.Patch = patch;
-        
+
         return semanticVersion;
     }
-    
+
     /// <summary>
     /// 解析版本范围字符串
     /// </summary>
     public VersionRange ParseVersionRange(string versionRange)
     {
         var range = new VersionRange();
-        
+
         if (string.IsNullOrWhiteSpace(versionRange))
             return range;
-        
+
         versionRange = versionRange.Trim();
-        
+
         // 处理通配符版本 (例如: "1.2.*")
         if (versionRange.EndsWith(".*"))
         {
@@ -186,7 +186,7 @@ public class VersionManager
             range.IncludeMinVersion = true;
             range.IncludeMaxVersion = true;
         }
-        
+
         return range;
     }
 }
@@ -196,12 +196,35 @@ public class VersionManager
 /// </summary>
 public class SemanticVersion
 {
+    /// <summary>
+    /// 主版本
+    /// </summary>
     public int Major { get; set; }
+
+    /// <summary>
+    /// 次要版本
+    /// </summary>
     public int Minor { get; set; }
+
+    /// <summary>
+    /// 补丁版本
+    /// </summary>
     public int Patch { get; set; }
+
+    /// <summary>
+    /// 是否为预发布版本
+    /// </summary>
     public bool IsPrerelease { get; set; }
+
+    /// <summary>
+    /// 预发布版本
+    /// </summary>
     public string Prerelease { get; set; } = string.Empty;
-    
+
+    /// <summary>
+    /// 转换为字符串
+    /// </summary>
+    /// <returns></returns>
     public override string ToString()
     {
         var version = $"{Major}.{Minor}.{Patch}";
@@ -209,6 +232,7 @@ public class SemanticVersion
         {
             version += $"-{Prerelease}";
         }
+
         return version;
     }
 }
@@ -219,18 +243,27 @@ public class SemanticVersion
 public class VersionComparer : IComparer<string>
 {
     private readonly VersionManager _versionManager;
-    
+
+    /// <summary>
+    /// 
+    /// </summary>
     public VersionComparer()
     {
         _versionManager = new VersionManager();
     }
-    
+
+    /// <summary>
+    /// 比较版本
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
     public int Compare(string? x, string? y)
     {
         if (x == null && y == null) return 0;
         if (x == null) return -1;
         if (y == null) return 1;
-        
+
         return _versionManager.CompareVersions(x, y);
     }
 }

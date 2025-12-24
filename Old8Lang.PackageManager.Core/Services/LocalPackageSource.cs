@@ -12,25 +12,30 @@ public class LocalPackageSource : IPackageSource
     public string Name { get; private set; }
     public string Source { get; private set; }
     public bool IsEnabled { get; set; } = true;
-    
+
     private readonly Dictionary<string, List<Package>> _packageCache = new();
-    
+
+    /// <summary>
+    /// 本地包源
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="sourcePath"></param>
     public LocalPackageSource(string name, string sourcePath)
     {
         Name = name;
         Source = sourcePath;
         InitializeCache();
     }
-    
+
     private void InitializeCache()
     {
         if (!Directory.Exists(Source))
             return;
-            
+
         try
         {
             var metadataFiles = Directory.GetFiles(Source, "*.metadata.json", SearchOption.AllDirectories);
-            
+
             foreach (var metadataFile in metadataFiles)
             {
                 var json = File.ReadAllText(metadataFile);
@@ -41,6 +46,7 @@ public class LocalPackageSource : IPackageSource
                     {
                         _packageCache[package.Id] = new List<Package>();
                     }
+
                     _packageCache[package.Id].Add(package);
                 }
             }
@@ -50,30 +56,35 @@ public class LocalPackageSource : IPackageSource
             Console.WriteLine($"Error initializing local package source cache: {ex.Message}");
         }
     }
-    
+
+    /// <summary>
+    /// 搜索包
+    /// </summary>
+    /// <param name="searchTerm"></param>
+    /// <param name="includePrerelease"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<Package>> SearchPackagesAsync(string searchTerm, bool includePrerelease = false)
     {
         return await Task.Run(() =>
         {
             var results = new List<Package>();
-            
+
             foreach (var kvp in _packageCache)
             {
-                if (kvp.Key.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                if (!kvp.Key.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) continue;
+                var packages = kvp.Value;
+                if (!includePrerelease)
                 {
-                    var packages = kvp.Value;
-                    if (!includePrerelease)
-                    {
-                        packages = packages.Where(p => !p.Version.Contains('-')).ToList();
-                    }
-                    results.AddRange(packages);
+                    packages = packages.Where(p => !p.Version.Contains('-')).ToList();
                 }
+
+                results.AddRange(packages);
             }
-            
+
             return results.OrderByDescending(p => p.PublishedAt);
         });
     }
-    
+
     public async Task<IEnumerable<string>> GetPackageVersionsAsync(string packageId, bool includePrerelease = false)
     {
         return await Task.Run(() =>
@@ -85,12 +96,21 @@ public class LocalPackageSource : IPackageSource
                 {
                     versions = versions.Where(v => !v.Contains('-'));
                 }
+
                 return versions.OrderByDescending(v => v);
             }
+
             return Enumerable.Empty<string>();
         });
     }
-    
+
+    /// <summary>
+    /// 下载包
+    /// </summary>
+    /// <param name="packageId"></param>
+    /// <param name="version"></param>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException"></exception>
     public async Task<Stream> DownloadPackageAsync(string packageId, string version)
     {
         if (_packageCache.TryGetValue(packageId, out var packages))
@@ -101,10 +121,16 @@ public class LocalPackageSource : IPackageSource
                 return await Task.FromResult(File.OpenRead(package.FilePath));
             }
         }
-        
+
         throw new FileNotFoundException($"Package {packageId} version {version} not found in local source.");
     }
-    
+
+    /// <summary>
+    /// 获取包元数据
+    /// </summary>
+    /// <param name="packageId"></param>
+    /// <param name="version"></param>
+    /// <returns></returns>
     public async Task<Package?> GetPackageMetadataAsync(string packageId, string version)
     {
         return await Task.Run(() =>
@@ -113,6 +139,7 @@ public class LocalPackageSource : IPackageSource
             {
                 return packages.FirstOrDefault(p => p.Version == version);
             }
+
             return null;
         });
     }
