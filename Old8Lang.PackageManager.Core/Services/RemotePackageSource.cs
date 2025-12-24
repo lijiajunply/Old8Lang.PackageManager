@@ -1,6 +1,5 @@
 using Old8Lang.PackageManager.Core.Interfaces;
 using Old8Lang.PackageManager.Core.Models;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Old8Lang.PackageManager.Core.Services;
@@ -230,7 +229,7 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _httpClient?.Dispose();
+        _httpClient.Dispose();
     }
 
     #region 私有方法
@@ -364,25 +363,64 @@ public class PackageSearchResponse
 [Serializable]
 public class PackageDetailResponse
 {
+    /// <summary>
+    /// 包标识符
+    /// </summary>
     public string PackageId { get; set; } = string.Empty;
+
+    /// 包版本
     public string Version { get; set; } = string.Empty;
+
+    /// 包语言
     public string Language { get; set; } = string.Empty;
+
+    /// 包描述
     public string Description { get; set; } = string.Empty;
+
+    /// 包作者
     public string Author { get; set; } = string.Empty;
+
+    /// 包许可证
     public string License { get; set; } = string.Empty;
+
+    /// 包项目网址
     public string ProjectUrl { get; set; } = string.Empty;
-    public List<string> Tags { get; set; } = new();
-    public List<PackageDependency> Dependencies { get; set; } = new();
-    public List<ExternalDependencyInfo> ExternalDependencies { get; set; } = new();
+
+    /// 包标签
+    public List<string> Tags { get; set; } = [];
+
+    /// 包依赖项
+    public List<PackageDependency> Dependencies { get; set; } = [];
+
+    /// 包外部依赖项
+    public List<ExternalDependencyInfo> ExternalDependencies { get; set; } = [];
+
+    /// 包语言元数据
     public Dictionary<string, string> LanguageMetadata { get; set; } = new();
+
+    /// 包发布时间
     public DateTime PublishedAt { get; set; }
+
+    /// 包更新时间
     public DateTime UpdatedAt { get; set; }
+
+    /// 包下载计数
     public long DownloadCount { get; set; }
+
+    /// 包大小
     public long Size { get; set; }
+
+    /// 包校验和
     public string Checksum { get; set; } = string.Empty;
+
+    /// 包是否已列出
     public bool IsListed { get; set; }
+
+    /// 包是否为预发布版本
     public bool IsPrerelease { get; set; }
-    public List<PackageVersionInfo> Versions { get; set; } = new();
+
+    /// 包版本信息
+    public List<PackageVersionInfo> Versions { get; set; } = [];
 }
 
 /// <summary>
@@ -391,11 +429,34 @@ public class PackageDetailResponse
 [Serializable]
 public class PackageVersionInfo
 {
+    /// <summary>
+    /// 包版本
+    /// </summary>
     public string Version { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 包发布时间
+    /// </summary>
     public DateTime PublishedAt { get; set; }
+
+    /// <summary>
+    /// 包下载计数
+    /// </summary>
     public long DownloadCount { get; set; }
+
+    /// <summary>
+    /// 包是否为预发布版本
+    /// </summary>
     public bool IsPrerelease { get; set; }
+
+    /// <summary>
+    /// 包校验和
+    /// </summary>
     public string Checksum { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 包大小
+    /// </summary>
     public long Size { get; set; }
 }
 
@@ -405,11 +466,34 @@ public class PackageVersionInfo
 [Serializable]
 public class ExternalDependencyInfo
 {
+    /// <summary>
+    /// 依赖类型
+    /// </summary>
     public string DependencyType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 包标识符
+    /// </summary>
     public string PackageName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 包版本范围
+    /// </summary>
     public string VersionSpec { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 包索引网址
+    /// </summary>
     public string IndexUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 额外的索引网址
+    /// </summary>
     public string ExtraIndexUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否为开发依赖
+    /// </summary>
     public bool IsDevDependency { get; set; }
 }
 
