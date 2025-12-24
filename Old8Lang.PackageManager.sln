@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Old8Lang.PackageManager.Core", "Old8Lang.PackageManager.Core\Old8Lang.PackageManager.Core.csproj", "{B034E3EA-20F3-4034-BF5A-DE0D2BB551A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Old8Lang.PackageManager", "Old8Lang.PackageManager\Old8Lang.PackageManager.csproj", "{DB1F0BDB-37DA-47D5-A26F-83CB656E3E90}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Old8Lang.PackageManager.Example", "Old8Lang.PackageManager.Example\Old8Lang.PackageManager.Example.csproj", "{DB1F0BDB-37DA-47D5-A26F-83CB656E3E90}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Old8Lang.PackageManager.Server", "Old8Lang.PackageManager.Server\Old8Lang.PackageManager.Server.csproj", "{309EA6C3-F54E-4751-93BF-DE2AC06D0A6F}"
 EndProject
