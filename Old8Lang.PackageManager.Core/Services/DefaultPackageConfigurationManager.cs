@@ -128,13 +128,9 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
             var reference = configuration.References.FirstOrDefault(r =>
                 r.PackageId.Equals(packageId, StringComparison.OrdinalIgnoreCase));
 
-            if (reference != null)
-            {
-                configuration.References.Remove(reference);
-                return await WriteConfigurationAsync(configPath, configuration);
-            }
-
-            return true; // 不存在也算成功
+            if (reference == null) return true; // 不存在也算成功
+            configuration.References.Remove(reference);
+            return await WriteConfigurationAsync(configPath, configuration);
         }
         catch (Exception ex)
         {
@@ -158,11 +154,11 @@ public class DefaultPackageConfigurationManager : IPackageConfigurationManager
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to get package references: {ex.Message}");
-            return Enumerable.Empty<PackageReference>();
+            return [];
         }
     }
 
-    private List<PackageSource> GetDefaultSources()
+    private static List<PackageSource> GetDefaultSources()
     {
         return
         [

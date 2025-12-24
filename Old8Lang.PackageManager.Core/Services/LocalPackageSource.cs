@@ -9,8 +9,19 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// </summary>
 public class LocalPackageSource : IPackageSource
 {
-    public string Name { get; private set; }
-    public string Source { get; private set; }
+    /// <summary>
+    /// 包源名称
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// 包源路径
+    /// </summary>
+    public string Source { get; }
+
+    /// <summary>
+    /// 是否启用
+    /// </summary>
     public bool IsEnabled { get; set; } = true;
 
     private readonly Dictionary<string, List<Package>> _packageCache = new();
@@ -42,12 +53,13 @@ public class LocalPackageSource : IPackageSource
                 var package = JsonSerializer.Deserialize<Package>(json);
                 if (package != null)
                 {
-                    if (!_packageCache.ContainsKey(package.Id))
+                    if (!_packageCache.TryGetValue(package.Id, out var value))
                     {
-                        _packageCache[package.Id] = new List<Package>();
+                        value = [];
+                        _packageCache[package.Id] = value;
                     }
 
-                    _packageCache[package.Id].Add(package);
+                    value.Add(package);
                 }
             }
         }
@@ -85,6 +97,12 @@ public class LocalPackageSource : IPackageSource
         });
     }
 
+    /// <summary>
+    /// 获取包版本
+    /// </summary>
+    /// <param name="packageId"></param>
+    /// <param name="includePrerelease"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<string>> GetPackageVersionsAsync(string packageId, bool includePrerelease = false)
     {
         return await Task.Run(() =>

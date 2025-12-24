@@ -16,7 +16,7 @@ public class Old8LangAdapter : ILanguageAdapter
     /// <summary>
     /// 支持的文件扩展名
     /// </summary>
-    public IEnumerable<string> SupportedFileExtensions => new[] { ".o8", ".old8", ".ol" };
+    public IEnumerable<string> SupportedFileExtensions => [".o8", ".old8", ".ol"];
 
     /// <summary>
     /// 包配置文件名

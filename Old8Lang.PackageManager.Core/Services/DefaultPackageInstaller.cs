@@ -142,6 +142,13 @@ public class DefaultPackageInstaller(PackageSourceManager sourceManager, IPackag
         }
     }
 
+    /// <summary>
+    /// 检查包是否已安装
+    /// </summary>
+    /// <param name="packageId"></param>
+    /// <param name="version"></param>
+    /// <param name="installPath"></param>
+    /// <returns></returns>
     public async Task<bool> IsPackageInstalledAsync(string packageId, string version, string installPath)
     {
         return await Task.Run(() =>
@@ -153,6 +160,11 @@ public class DefaultPackageInstaller(PackageSourceManager sourceManager, IPackag
         });
     }
 
+    /// <summary>
+    /// 获取已安装的包
+    /// </summary>
+    /// <param name="installPath"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<Package>> GetInstalledPackagesAsync(string installPath)
     {
         var packages = new List<Package>();
