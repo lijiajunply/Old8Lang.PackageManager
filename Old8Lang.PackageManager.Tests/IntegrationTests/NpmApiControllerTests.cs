@@ -10,16 +10,10 @@ namespace Old8Lang.PackageManager.Tests.IntegrationTests;
 /// <summary>
 /// NPM API 集成测试
 /// </summary>
-public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class NpmApiControllerTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly HttpClient _client;
-
-    public NpmApiControllerTests(WebApplicationFactory<Program> factory)
-    {
-        _factory = factory;
-        _client = _factory.CreateClient();
-    }
+    private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
     public async Task GetRegistryInfo_ShouldReturnValidRegistryInfo()
@@ -31,7 +25,7 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         var registryInfo = JsonSerializer.Deserialize<JsonElement>(content);
-        
+
         Assert.True(registryInfo.TryGetProperty("name", out var nameProperty));
         Assert.Equal("old8lang-npm-registry", nameProperty.GetString());
     }
@@ -46,7 +40,7 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         var searchResult = JsonSerializer.Deserialize<JsonElement>(content);
-        
+
         Assert.True(searchResult.TryGetProperty("objects", out var objectsProperty));
         Assert.True(searchResult.TryGetProperty("total", out var totalProperty));
     }
@@ -75,7 +69,7 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
         response.EnsureSuccessStatusCode();
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-        
+
         Assert.True(result.TryGetProperty("success", out var successProperty));
         Assert.True(successProperty.GetBoolean());
     }
@@ -85,10 +79,11 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
     {
         // Arrange - Create a simple gzip stream
         using var memoryStream = new MemoryStream();
-        using var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress, true);
+        using var gzipStream =
+            new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress, true);
         gzipStream.Write(new byte[] { 0x50, 0x4B, 0x03, 0x04 }); // ZIP magic bytes
         gzipStream.Flush();
-        
+
         using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(memoryStream.ToArray());
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/gzip");
@@ -101,7 +96,7 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
         response.EnsureSuccessStatusCode();
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-        
+
         Assert.True(result.TryGetProperty("success", out var successProperty));
         Assert.True(successProperty.GetBoolean());
     }
@@ -120,14 +115,15 @@ public class NpmApiControllerTests : IClassFixture<WebApplicationFactory<Program
     [InlineData("simple-package-1.0.0.tgz", "simple-package", "1.0.0")]
     [InlineData("@scope/package-2.0.0.tgz", "@scope/package", "2.0.0")]
     [InlineData("package-with-dashes-1.2.3.tgz", "package-with-dashes", "1.2.3")]
-    public void ExtractVersionFromFileName_ShouldExtractCorrectVersion(string fileName, string expectedPackage, string expectedVersion)
+    public void ExtractVersionFromFileName_ShouldExtractCorrectVersion(string fileName, string expectedPackage,
+        string expectedVersion)
     {
         // This tests a private method through public behavior
         // We'll test the file name parsing through the download endpoint behavior
-        
+
         // Arrange - Just verify the naming pattern is correct
         var parts = fileName.Replace(".tgz", "").Split('-');
-        
+
         // Act & Assert - Simple verification of pattern
         Assert.True(parts.Length >= 2);
         Assert.EndsWith(expectedVersion, fileName);
@@ -160,19 +156,19 @@ public class JavaScriptPackageManagementIntegrationTests : IClassFixture<WebAppl
     public async Task JavaScriptPackageParser_ShouldBeRegistered()
     {
         // Act
-        var parser = _serviceProvider.GetService<Old8Lang.PackageManager.Server.Services.IJavaScriptPackageParser>();
-        
+        var parser = _serviceProvider.GetService<Server.Services.IJavaScriptPackageParser>();
+
         // Assert
         Assert.NotNull(parser);
-        Assert.IsType<Old8Lang.PackageManager.Server.Services.JavaScriptPackageParser>(parser);
+        Assert.IsType<Server.Services.JavaScriptPackageParser>(parser);
     }
 
     [Fact]
     public async Task NpmController_ShouldBeRegistered()
     {
         // Act
-        var controller = _serviceProvider.GetService<Old8Lang.PackageManager.Server.Controllers.NpmController>();
-        
+        var controller = _serviceProvider.GetService<Server.Controllers.NpmController>();
+
         // Assert
         Assert.NotNull(controller);
     }
@@ -181,8 +177,9 @@ public class JavaScriptPackageManagementIntegrationTests : IClassFixture<WebAppl
     public async Task PackageStorageService_ShouldSupportJavaScriptFormats()
     {
         // Act
-        var storageOptions = _serviceProvider.GetService<Old8Lang.PackageManager.Server.Configuration.PackageStorageOptions>();
-        
+        var storageOptions =
+            _serviceProvider.GetService<Server.Configuration.PackageStorageOptions>();
+
         // Assert
         Assert.NotNull(storageOptions);
         Assert.Contains(".tgz", storageOptions.AllowedExtensions);
@@ -195,8 +192,8 @@ public class JavaScriptPackageManagementIntegrationTests : IClassFixture<WebAppl
     public async Task ApiOptions_ShouldIncludeJavaScriptSupport()
     {
         // Act
-        var apiOptions = _serviceProvider.GetService<Old8Lang.PackageManager.Server.Configuration.ApiOptions>();
-        
+        var apiOptions = _serviceProvider.GetService<Server.Configuration.ApiOptions>();
+
         // Assert
         Assert.NotNull(apiOptions);
         Assert.Contains("javascript", apiOptions.SupportedLanguages);

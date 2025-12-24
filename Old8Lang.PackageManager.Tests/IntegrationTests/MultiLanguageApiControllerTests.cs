@@ -329,8 +329,8 @@ public class MultiLanguageApiControllerTests
         responseValue.Should().NotBeNull();
         
         // Verify PyPI structure
-        var responseDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
-            System.Text.Json.JsonSerializer.Serialize(responseValue));
+        var responseDict = JsonSerializer.Deserialize<Dictionary<string, object>>(
+            JsonSerializer.Serialize(responseValue));
         
         responseDict.Should().ContainKey("info");
         responseDict.Should().ContainKey("releases");
@@ -381,8 +381,8 @@ public class MultiLanguageApiControllerTests
         responseValue.Should().NotBeNull();
         
         // Verify PyPI search structure
-        var responseDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
-            System.Text.Json.JsonSerializer.Serialize(responseValue));
+        var responseDict = JsonSerializer.Deserialize<Dictionary<string, object>>(
+            JsonSerializer.Serialize(responseValue));
         
         responseDict.Should().ContainKey("info");
         responseDict.Should().ContainKey("results");
