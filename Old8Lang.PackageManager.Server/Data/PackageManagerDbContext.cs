@@ -15,6 +15,7 @@ public class PackageManagerDbContext(DbContextOptions<PackageManagerDbContext> o
     public virtual DbSet<ApiKeyEntity> ApiKeys { get; set; } = null!;
     public virtual DbSet<ExternalDependencyEntity> ExternalDependencies { get; set; } = null!;
     public virtual DbSet<LanguageMetadataEntity> LanguageMetadata { get; set; } = null!;
+    public virtual DbSet<PackageQualityScoreEntity> PackageQualityScores { get; set; } = null!;
 
     // 用户相关表
     public virtual DbSet<UserEntity> Users { get; set; } = null!;
@@ -119,6 +120,28 @@ public class PackageManagerDbContext(DbContextOptions<PackageManagerDbContext> o
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => new { e.PackageEntityId, e.Language }).IsUnique();
+        });
+
+        // PackageQualityScoreEntity 配置
+        modelBuilder.Entity<PackageQualityScoreEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.QualityScore).HasPrecision(5, 2);
+            entity.Property(e => e.CompletenessScore).HasPrecision(5, 2);
+            entity.Property(e => e.StabilityScore).HasPrecision(5, 2);
+            entity.Property(e => e.MaintenanceScore).HasPrecision(5, 2);
+            entity.Property(e => e.SecurityScore).HasPrecision(5, 2);
+            entity.Property(e => e.CommunityScore).HasPrecision(5, 2);
+            entity.Property(e => e.DocumentationScore).HasPrecision(5, 2);
+
+            entity.HasOne(e => e.Package)
+                .WithOne(p => p.QualityScore)
+                .HasForeignKey<PackageQualityScoreEntity>(e => e.PackageEntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.PackageEntityId).IsUnique();
+            entity.HasIndex(e => e.QualityScore);
+            entity.HasIndex(e => e.LastCalculatedAt);
         });
 
         // UserEntity 配置

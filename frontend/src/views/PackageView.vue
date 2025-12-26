@@ -217,6 +217,9 @@
             </div>
           </div>
 
+          <!-- 质量评分 -->
+          <PackageQualityDetails :quality-score="packageStore.currentPackage.qualityScore" />
+
           <!-- 相关包 -->
           <div class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">相关包</h3>
@@ -263,6 +266,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePackageStore } from '@/stores/package'
+import PackageQualityDetails from '@/components/PackageQualityDetails.vue'
 import type { Package } from '@/types/package'
 
 const route = useRoute()

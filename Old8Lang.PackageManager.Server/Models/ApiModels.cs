@@ -18,6 +18,7 @@ public class PackageSearchResult
     public DateTime PublishedAt { get; set; }
     public long DownloadCount { get; set; }
     public bool IsPrerelease { get; set; }
+    public PackageQualityScore? QualityScore { get; set; }
 }
 
 /// <summary>
@@ -55,6 +56,7 @@ public class PackageDetailResponse
     public bool IsListed { get; set; }
     public bool IsPrerelease { get; set; }
     public List<PackageVersionInfo> Versions { get; set; } = new();
+    public PackageQualityScore? QualityScore { get; set; }
 }
 
 /// <summary>
@@ -155,4 +157,20 @@ public class ServiceIndexResponse
 {
     public string Version { get; set; } = "3.0.0";
     public List<ServiceResource> Resources { get; set; } = new();
+}
+
+/// <summary>
+/// 包质量评分信息
+/// </summary>
+[Serializable]
+public class PackageQualityScore
+{
+    public double QualityScore { get; set; }
+    public double CompletenessScore { get; set; }
+    public double StabilityScore { get; set; }
+    public double MaintenanceScore { get; set; }
+    public double SecurityScore { get; set; }
+    public double CommunityScore { get; set; }
+    public double DocumentationScore { get; set; }
+    public DateTime LastCalculatedAt { get; set; }
 }

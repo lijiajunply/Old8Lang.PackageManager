@@ -35,6 +35,7 @@ public class MultiLanguageApiControllerTests
         _packagesController = new PackagesController(
             _mockSearchService.Object,
             _mockPackageService.Object,
+            new Mock<IPackageQualityService>().Object,
             new Mock<IApiKeyService>().Object,
             new Mock<ApiOptions>().Object,
             _mockLogger.Object);

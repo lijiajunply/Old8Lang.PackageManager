@@ -27,6 +27,7 @@ public class PackageManagementService(
     PackageManagerDbContext dbContext,
     IPackageStorageService storageService,
     IPackageSignatureService signatureService,
+    IPackageQualityService qualityService,
     ILogger<PackageManagementService> logger,
     IPythonPackageParser pythonParser)
     : IPackageManagementService
@@ -38,6 +39,7 @@ public class PackageManagementService(
             .Include(p => p.PackageDependencies)
             .Include(p => p.Files)
             .Include(p => p.ExternalDependencies)
+            .Include(p => p.QualityScore)
             .Where(p => p.PackageId == packageId && p.Version == version);
             
         if (!string.IsNullOrEmpty(language))
@@ -65,6 +67,7 @@ public class PackageManagementService(
             .Include(p => p.PackageDependencies)
             .Include(p => p.Files)
             .Include(p => p.ExternalDependencies)
+            .Include(p => p.QualityScore)
             .Where(p => p.IsListed);
         
         // 语言筛选
@@ -96,6 +99,7 @@ public class PackageManagementService(
             .Include(p => p.PackageTags)
             .Include(p => p.PackageDependencies)
             .Include(p => p.ExternalDependencies)
+            .Include(p => p.QualityScore)
             .Where(p => p.IsListed && !p.IsPrerelease);
         
         // 语言筛选
@@ -229,9 +233,25 @@ public class PackageManagementService(
         // 保存到数据库
         dbContext.Packages.Add(packageEntity);
         await dbContext.SaveChangesAsync();
-        
+
+        // Calculate and save quality score
+        try
+        {
+            var qualityScore = await qualityService.CalculateQualityScoreAsync(packageEntity);
+            dbContext.PackageQualityScores.Add(qualityScore);
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Quality score calculated for package {PackageId} {Version}: {Score}",
+                packageInfo.Id, packageInfo.Version, qualityScore.QualityScore);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to calculate quality score for package {PackageId} {Version}",
+                packageInfo.Id, packageInfo.Version);
+            // Don't fail the upload if quality score calculation fails
+        }
+
         logger.LogInformation("包上传成功: {PackageId} {Version}", packageInfo.Id, packageInfo.Version);
-        
+
         return packageEntity;
     }
     

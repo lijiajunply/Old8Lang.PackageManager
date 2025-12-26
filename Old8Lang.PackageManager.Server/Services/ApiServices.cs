@@ -239,7 +239,18 @@ public class PackageSearchService : IPackageSearchService
             Tags = package.PackageTags.Select(t => t.Tag).ToList(),
             PublishedAt = package.PublishedAt,
             DownloadCount = package.DownloadCount,
-            IsPrerelease = package.IsPrerelease
+            IsPrerelease = package.IsPrerelease,
+            QualityScore = package.QualityScore != null ? new PackageQualityScore
+            {
+                QualityScore = package.QualityScore.QualityScore,
+                CompletenessScore = package.QualityScore.CompletenessScore,
+                StabilityScore = package.QualityScore.StabilityScore,
+                MaintenanceScore = package.QualityScore.MaintenanceScore,
+                SecurityScore = package.QualityScore.SecurityScore,
+                CommunityScore = package.QualityScore.CommunityScore,
+                DocumentationScore = package.QualityScore.DocumentationScore,
+                LastCalculatedAt = package.QualityScore.LastCalculatedAt
+            } : null
         };
     }
     
@@ -277,7 +288,18 @@ public class PackageSearchService : IPackageSearchService
             Checksum = package.Checksum,
             IsListed = package.IsListed,
             IsPrerelease = package.IsPrerelease,
-            Versions = new List<PackageVersionInfo>()
+            Versions = new List<PackageVersionInfo>(),
+            QualityScore = package.QualityScore != null ? new PackageQualityScore
+            {
+                QualityScore = package.QualityScore.QualityScore,
+                CompletenessScore = package.QualityScore.CompletenessScore,
+                StabilityScore = package.QualityScore.StabilityScore,
+                MaintenanceScore = package.QualityScore.MaintenanceScore,
+                SecurityScore = package.QualityScore.SecurityScore,
+                CommunityScore = package.QualityScore.CommunityScore,
+                DocumentationScore = package.QualityScore.DocumentationScore,
+                LastCalculatedAt = package.QualityScore.LastCalculatedAt
+            } : null
         };
     }
 }

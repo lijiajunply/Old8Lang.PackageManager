@@ -138,9 +138,12 @@
                 <h3 class="text-lg font-semibold text-gray-900 truncate mb-1">{{ pkg.id }}</h3>
                 <span class="text-sm text-gray-500">{{ pkg.version }}</span>
               </div>
-              <n-tag :type="getLanguageColor(pkg.language)" size="small">
-                {{ getLanguageLabel(pkg.language) }}
-              </n-tag>
+              <div class="flex items-center gap-2">
+                <PackageQualityBadge :quality-score="pkg.qualityScore" />
+                <n-tag :type="getLanguageColor(pkg.language)" size="small">
+                  {{ getLanguageLabel(pkg.language) }}
+                </n-tag>
+              </div>
             </div>
             
             <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ pkg.description }}</p>
@@ -246,6 +249,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usePackageStore } from '@/stores/package'
+import PackageQualityBadge from '@/components/PackageQualityBadge.vue'
 
 const router = useRouter()
 const route = useRoute()

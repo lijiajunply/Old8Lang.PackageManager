@@ -73,6 +73,11 @@ public class PackageEntity
 
     public virtual ICollection<LanguageMetadataEntity> LanguageMetadata { get; set; } =
         new List<LanguageMetadataEntity>();
+
+    /// <summary>
+    /// Quality score for this package (one-to-one relationship)
+    /// </summary>
+    public virtual PackageQualityScoreEntity? QualityScore { get; set; }
 }
 
 /// <summary>

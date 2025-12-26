@@ -21,6 +21,7 @@ export interface Package {
   isListed: boolean
   isPrerelease: boolean
   tags: string[]
+  qualityScore?: PackageQualityScore
 }
 
 export interface PackageDependency {
@@ -80,4 +81,15 @@ export interface PopularPackage {
   language: string
   latestVersion: string
   updatedAt: string
+}
+
+export interface PackageQualityScore {
+  qualityScore: number
+  completenessScore: number
+  stabilityScore: number
+  maintenanceScore: number
+  securityScore: number
+  communityScore: number
+  documentationScore: number
+  lastCalculatedAt: string
 }

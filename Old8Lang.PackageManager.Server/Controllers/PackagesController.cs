@@ -16,6 +16,7 @@ namespace Old8Lang.PackageManager.Server.Controllers;
 public class PackagesController(
     IPackageSearchService searchService,
     IPackageManagementService packageService,
+    IPackageQualityService qualityService,
     IApiKeyService apiKeyService,
     ApiOptions apiOptions,
     ILogger<PackagesController> logger)
@@ -304,6 +305,130 @@ public class PackagesController(
         // 这里应该调用包存储服务获取文件流
         // 为了简化示例，返回 null
         return null;
+    }
+
+    /// <summary>
+    /// 获取包的质量评分
+    /// </summary>
+    /// <param name="id">包 ID</param>
+    /// <param name="version">版本号</param>
+    [HttpGet("package/{id}/{version}/quality")]
+    public async Task<ActionResult<ApiResponse<PackageQualityScore>>> GetPackageQualityScore(string id, string version)
+    {
+        try
+        {
+            var score = await qualityService.GetQualityScoreAsync(id, version);
+            if (score == null)
+            {
+                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult("包不存在或质量评分未计算", "QUALITY_SCORE_NOT_FOUND"));
+            }
+
+            var qualityScoreDto = new PackageQualityScore
+            {
+                QualityScore = score.QualityScore,
+                CompletenessScore = score.CompletenessScore,
+                StabilityScore = score.StabilityScore,
+                MaintenanceScore = score.MaintenanceScore,
+                SecurityScore = score.SecurityScore,
+                CommunityScore = score.CommunityScore,
+                DocumentationScore = score.DocumentationScore,
+                LastCalculatedAt = score.LastCalculatedAt
+            };
+
+            return Ok(ApiResponse<PackageQualityScore>.SuccessResult(qualityScoreDto));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取包质量评分失败: {PackageId} {Version}", id, version);
+            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult("获取包质量评分失败"));
+        }
+    }
+
+    /// <summary>
+    /// 重新计算包的质量评分
+    /// </summary>
+    /// <param name="id">包 ID</param>
+    /// <param name="version">版本号</param>
+    [HttpPost("package/{id}/{version}/quality/recalculate")]
+    public async Task<ActionResult<ApiResponse<PackageQualityScore>>> RecalculatePackageQualityScore(string id, string version)
+    {
+        try
+        {
+            // Validate API key
+            var apiKey = GetApiKeyFromRequest();
+            if (apiOptions.RequireApiKey && string.IsNullOrEmpty(apiKey))
+            {
+                return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult("需要提供有效的 API 密钥", "API_KEY_REQUIRED"));
+            }
+
+            if (apiOptions.RequireApiKey)
+            {
+                var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey!);
+                if (keyEntity == null)
+                {
+                    return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
+                }
+            }
+
+            var package = await packageService.GetPackageAsync(id, version);
+            if (package == null)
+            {
+                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
+            }
+
+            var newScore = await qualityService.CalculateQualityScoreAsync(package);
+
+            var qualityScoreDto = new PackageQualityScore
+            {
+                QualityScore = newScore.QualityScore,
+                CompletenessScore = newScore.CompletenessScore,
+                StabilityScore = newScore.StabilityScore,
+                MaintenanceScore = newScore.MaintenanceScore,
+                SecurityScore = newScore.SecurityScore,
+                CommunityScore = newScore.CommunityScore,
+                DocumentationScore = newScore.DocumentationScore,
+                LastCalculatedAt = newScore.LastCalculatedAt
+            };
+
+            return Ok(ApiResponse<PackageQualityScore>.SuccessResult(qualityScoreDto, "质量评分已重新计算"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "重新计算包质量评分失败: {PackageId} {Version}", id, version);
+            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult("重新计算包质量评分失败"));
+        }
+    }
+
+    /// <summary>
+    /// 重新计算所有包的质量评分 (管理员接口)
+    /// </summary>
+    [HttpPost("quality/recalculate-all")]
+    public async Task<ActionResult<ApiResponse<object>>> RecalculateAllQualityScores()
+    {
+        try
+        {
+            // Validate API key with admin scope
+            var apiKey = GetApiKeyFromRequest();
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                return Unauthorized(ApiResponse<object>.ErrorResult("需要提供有效的 API 密钥", "API_KEY_REQUIRED"));
+            }
+
+            var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
+            if (keyEntity == null || !keyEntity.Scopes.Contains("admin:all"))
+            {
+                return Unauthorized(ApiResponse<object>.ErrorResult("需要管理员权限", "ADMIN_REQUIRED"));
+            }
+
+            await qualityService.RecalculateAllScoresAsync();
+
+            return Ok(ApiResponse<object>.SuccessResult(null, "所有包的质量评分已重新计算"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "重新计算所有包质量评分失败");
+            return StatusCode(500, ApiResponse<object>.ErrorResult("重新计算所有包质量评分失败"));
+        }
     }
 }
 
