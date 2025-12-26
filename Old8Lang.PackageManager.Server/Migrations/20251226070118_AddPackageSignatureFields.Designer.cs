@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Old8Lang.PackageManager.Server.Data;
 
@@ -10,9 +11,11 @@ using Old8Lang.PackageManager.Server.Data;
 namespace Old8Lang.PackageManager.Server.Migrations
 {
     [DbContext(typeof(PackageManagerDbContext))]
-    partial class PackageManagerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251226070118_AddPackageSignatureFields")]
+    partial class AddPackageSignatureFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");

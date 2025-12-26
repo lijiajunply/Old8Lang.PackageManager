@@ -13,6 +13,14 @@ builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection("Se
 builder.Services.Configure<OidcConfiguration>(builder.Configuration.GetSection("Authentication:OIDC"));
 builder.Services.Configure<AuthenticationConfiguration>(builder.Configuration.GetSection("Authentication"));
 
+// 注册 PackageStorageOptions 为单例，供证书存储服务使用
+builder.Services.AddSingleton(sp =>
+{
+    var options = new PackageStorageOptions();
+    builder.Configuration.GetSection("PackageStorage").Bind(options);
+    return options;
+});
+
 // 配置数据库
 var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SQLite";
 switch (dbProvider.ToUpperInvariant())
@@ -57,6 +65,8 @@ builder.Services.AddScoped<IPythonPackageParser, PythonPackageParser>();
 builder.Services.AddScoped<IJavaScriptPackageParser, JavaScriptPackageParser>();
 builder.Services.AddScoped<IPackageSignatureService, PackageSignatureService>();
 builder.Services.AddScoped<IPackageIntegrityService, PackageIntegrityService>();
+builder.Services.AddScoped<ICertificateStore, FileSystemCertificateStore>();
+builder.Services.AddScoped<ICertificateManagementService, CertificateManagementService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<OidcAuthenticationService>();
 

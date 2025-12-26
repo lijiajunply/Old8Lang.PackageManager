@@ -1,7 +1,9 @@
 using Old8Lang.PackageManager.Server.Configuration;
+using Old8Lang.PackageManager.Core.Models;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 
 namespace Old8Lang.PackageManager.Server.Services;
 
@@ -10,62 +12,111 @@ namespace Old8Lang.PackageManager.Server.Services;
 /// </summary>
 public interface IPackageSignatureService
 {
-    Task<bool> VerifyPackageSignatureAsync(string packagePath, string? expectedSignature = null);
-    Task<string> GeneratePackageSignatureAsync(string packagePath, X509Certificate2? certificate = null);
+    Task<SignatureVerificationResult> VerifyPackageSignatureAsync(string packagePath);
+    Task<PackageSignature> SignPackageAsync(string packagePath, X509Certificate2 certificate);
     Task<bool> ValidateCertificateAsync(X509Certificate2 certificate);
-    Task<List<string>> GetTrustedCertificatesAsync();
+    Task<List<CertificateInfo>> GetTrustedCertificatesAsync();
+    Task AddTrustedCertificateAsync(X509Certificate2 certificate);
+    Task RemoveTrustedCertificateAsync(string thumbprint);
 }
 
 /// <summary>
 /// 包签名验证服务实现
 /// </summary>
-public class PackageSignatureService(SecurityOptions securityOptions, ILogger<PackageSignatureService> logger)
+public class PackageSignatureService(
+    SecurityOptions securityOptions,
+    ILogger<PackageSignatureService> logger,
+    ICertificateStore certificateStore)
     : IPackageSignatureService
 {
-    public async Task<bool> VerifyPackageSignatureAsync(string packagePath, string? expectedSignature = null)
+    private const string SignatureFileExtension = ".sig";
+
+    public async Task<SignatureVerificationResult> VerifyPackageSignatureAsync(string packagePath)
     {
         try
         {
             if (!securityOptions.EnablePackageSigning)
             {
-                logger.LogDebug("包签名验证已禁用，跳过验证: {PackagePath}", packagePath);
-                return true;
+                logger.LogDebug("包签名验证已禁用: {PackagePath}", packagePath);
+                return SignatureVerificationResult.Success(null!, isTrusted: true);
             }
-            
+
             if (!File.Exists(packagePath))
             {
-                logger.LogError("包文件不存在: {PackagePath}", packagePath);
-                return false;
+                return SignatureVerificationResult.Failure("包文件不存在", packagePath);
             }
-            
+
+            // 查找签名文件
+            var signatureFile = packagePath + SignatureFileExtension;
+            if (!File.Exists(signatureFile))
+            {
+                logger.LogWarning("未找到签名文件: {SignatureFile}", signatureFile);
+                return SignatureVerificationResult.Failure("未找到签名文件");
+            }
+
+            // 读取并解析签名
+            var signatureJson = await File.ReadAllTextAsync(signatureFile);
+            var signature = JsonSerializer.Deserialize<PackageSignature>(signatureJson);
+
+            if (signature == null)
+            {
+                return SignatureVerificationResult.Failure("签名文件格式无效");
+            }
+
             // 计算包的哈希值
-            var hash = await ComputePackageHashAsync(packagePath);
-            
-            // 如果提供了期望的签名，直接验证
-            if (!string.IsNullOrEmpty(expectedSignature))
+            var packageHash = await ComputePackageHashAsync(packagePath, signature.HashAlgorithm);
+            var packageHashBase64 = Convert.ToBase64String(packageHash);
+
+            // 验证哈希值是否匹配
+            if (signature.PackageHash != packageHashBase64)
             {
-                return VerifySignature(hash, expectedSignature);
+                logger.LogWarning("包哈希值不匹配: 期望={Expected}, 实际={Actual}",
+                    signature.PackageHash, packageHashBase64);
+                return SignatureVerificationResult.Failure("包哈希值不匹配，文件可能已被篡改");
             }
-            
-            // 否则检查包中是否包含签名文件
-            var signatureFile = Path.ChangeExtension(packagePath, ".sig");
-            if (File.Exists(signatureFile))
+
+            // 验证签名
+            var isSignatureValid = await VerifySignatureAsync(packageHash, signature);
+            if (!isSignatureValid)
             {
-                var storedSignature = await File.ReadAllTextAsync(signatureFile);
-                return VerifySignature(hash, storedSignature);
+                return SignatureVerificationResult.Failure("签名验证失败");
             }
-            
-            logger.LogWarning("未找到包签名: {PackagePath}", packagePath);
-            return false;
+
+            // 检查证书是否在信任列表中
+            var trustedCerts = await certificateStore.GetTrustedCertificatesAsync();
+            var isTrusted = trustedCerts.Any(c => c.Thumbprint.Equals(
+                signature.Signer.CertificateThumbprint,
+                StringComparison.OrdinalIgnoreCase));
+
+            if (!isTrusted && securityOptions.RequireTrustedCertificates)
+            {
+                logger.LogWarning("签名证书不在信任列表中: {Thumbprint}",
+                    signature.Signer.CertificateThumbprint);
+                return SignatureVerificationResult.Failure(
+                    "签名证书不在信任列表中",
+                    signature.Signer.CertificateThumbprint);
+            }
+
+            // 检查证书是否过期
+            if (signature.Signer.NotAfter < DateTimeOffset.UtcNow)
+            {
+                logger.LogWarning("签名证书已过期: {Thumbprint}", signature.Signer.CertificateThumbprint);
+                return SignatureVerificationResult.Failure("签名证书已过期");
+            }
+
+            logger.LogInformation("包签名验证成功: {PackagePath}, 签名者: {Signer}",
+                packagePath, signature.Signer.Name ?? signature.Signer.Email ?? "Unknown");
+
+            return SignatureVerificationResult.Success(signature, isTrusted);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "验证包签名失败: {PackagePath}", packagePath);
-            return false;
+            return SignatureVerificationResult.Failure($"验证失败: {ex.Message}");
         }
     }
-    
-    public async Task<string> GeneratePackageSignatureAsync(string packagePath, X509Certificate2? certificate = null)
+
+    public async Task<PackageSignature> SignPackageAsync(string packagePath, X509Certificate2 certificate)
     {
         try
         {
@@ -73,29 +124,63 @@ public class PackageSignatureService(SecurityOptions securityOptions, ILogger<Pa
             {
                 throw new FileNotFoundException("包文件不存在", packagePath);
             }
-            
-            // 计算包的哈希值
-            var hash = await ComputePackageHashAsync(packagePath);
-            
-            // 如果没有提供证书，使用简单的哈希签名（实际应用中应使用真实证书）
-            if (certificate == null)
+
+            if (!certificate.HasPrivateKey)
             {
-                // 简化的"签名"：基于哈希和时间戳
-                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                var combined = $"{Convert.ToBase64String(hash)}:{timestamp}";
-                var signature = Convert.ToBase64String(Encoding.UTF8.GetBytes(combined));
-                return signature;
+                throw new InvalidOperationException("证书不包含私钥，无法签名");
             }
-            
-            // 使用真实证书签名
+
+            // 使用配置的哈希算法
+            var hashAlgorithm = securityOptions.AllowedHashAlgorithms.FirstOrDefault() ?? "SHA256";
+            var packageHash = await ComputePackageHashAsync(packagePath, hashAlgorithm);
+
+            // 使用 RSA 私钥签名
             using var rsa = certificate.GetRSAPrivateKey();
             if (rsa == null)
             {
-                throw new InvalidOperationException("证书不包含私钥");
+                throw new InvalidOperationException("无法获取 RSA 私钥");
             }
-            
-            var signatureBytes = rsa.SignData(hash, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            return Convert.ToBase64String(signatureBytes);
+
+            var hashAlgorithmName = hashAlgorithm switch
+            {
+                "SHA256" => HashAlgorithmName.SHA256,
+                "SHA512" => HashAlgorithmName.SHA512,
+                _ => throw new NotSupportedException($"不支持的哈希算法: {hashAlgorithm}")
+            };
+
+            var signatureBytes = rsa.SignData(packageHash, hashAlgorithmName, RSASignaturePadding.Pkcs1);
+
+            // 构建签名信息
+            var signature = new PackageSignature
+            {
+                Algorithm = $"RSA-{hashAlgorithm}",
+                SignatureData = Convert.ToBase64String(signatureBytes),
+                Timestamp = DateTimeOffset.UtcNow,
+                PackageHash = Convert.ToBase64String(packageHash),
+                HashAlgorithm = hashAlgorithm,
+                Signer = new SignerInfo
+                {
+                    CertificateThumbprint = certificate.Thumbprint,
+                    PublicKey = certificate.ExportCertificatePem(),
+                    Name = certificate.GetNameInfo(X509NameType.SimpleName, false),
+                    Email = certificate.GetNameInfo(X509NameType.EmailName, false),
+                    NotBefore = certificate.NotBefore,
+                    NotAfter = certificate.NotAfter
+                }
+            };
+
+            // 保存签名文件
+            var signatureFile = packagePath + SignatureFileExtension;
+            var signatureJson = JsonSerializer.Serialize(signature, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            await File.WriteAllTextAsync(signatureFile, signatureJson);
+
+            logger.LogInformation("包签名成功: {PackagePath}, 签名文件: {SignatureFile}",
+                packagePath, signatureFile);
+
+            return signature;
         }
         catch (Exception ex)
         {
@@ -103,7 +188,7 @@ public class PackageSignatureService(SecurityOptions securityOptions, ILogger<Pa
             throw;
         }
     }
-    
+
     public async Task<bool> ValidateCertificateAsync(X509Certificate2 certificate)
     {
         try
@@ -114,35 +199,32 @@ public class PackageSignatureService(SecurityOptions securityOptions, ILogger<Pa
                 logger.LogWarning("证书已过期: {Thumbprint}", certificate.Thumbprint);
                 return false;
             }
-            
-            // 检查证书是否在信任列表中
-            if (securityOptions.TrustedCertificates.Any())
+
+            if (certificate.NotBefore > DateTime.UtcNow)
             {
-                var thumbprint = certificate.Thumbprint?.ToUpperInvariant();
-                var isTrusted = securityOptions.TrustedCertificates.Contains(thumbprint);
-                
-                if (!isTrusted)
+                logger.LogWarning("证书尚未生效: {Thumbprint}", certificate.Thumbprint);
+                return false;
+            }
+
+            // 如果启用了证书链验证
+            if (securityOptions.ValidateCertificateChain)
+            {
+                var chain = new X509Chain();
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+
+                var isValid = chain.Build(certificate);
+
+                if (!isValid)
                 {
-                    logger.LogWarning("证书不在信任列表中: {Thumbprint}", thumbprint);
+                    var errors = chain.ChainStatus.Select(status => status.StatusInformation);
+                    logger.LogWarning("证书链验证失败: {Thumbprint}, 错误: {Errors}",
+                        certificate.Thumbprint, string.Join(", ", errors));
                     return false;
                 }
             }
-            
-            // 验证证书链
-            var chain = new X509Chain();
-            chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
-            chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-            
-            var isValid = chain.Build(certificate);
-            
-            if (!isValid)
-            {
-                var errors = chain.ChainStatus.Select(status => status.StatusInformation);
-                logger.LogWarning("证书验证失败: {Thumbprint}, 错误: {Errors}", 
-                    certificate.Thumbprint, string.Join(", ", errors));
-            }
-            
-            return isValid;
+
+            return true;
         }
         catch (Exception ex)
         {
@@ -150,18 +232,35 @@ public class PackageSignatureService(SecurityOptions securityOptions, ILogger<Pa
             return false;
         }
     }
-    
-    public async Task<List<string>> GetTrustedCertificatesAsync()
+
+    public async Task<List<CertificateInfo>> GetTrustedCertificatesAsync()
     {
-        return await Task.FromResult(securityOptions.TrustedCertificates.ToList());
+        return await certificateStore.GetTrustedCertificatesAsync();
     }
-    
-    private async Task<byte[]> ComputePackageHashAsync(string packagePath)
+
+    public async Task AddTrustedCertificateAsync(X509Certificate2 certificate)
     {
-        var algorithm = securityOptions.AllowedHashAlgorithms.FirstOrDefault() ?? "SHA256";
-        
+        var isValid = await ValidateCertificateAsync(certificate);
+        if (!isValid)
+        {
+            throw new InvalidOperationException("证书验证失败，无法添加到信任列表");
+        }
+
+        await certificateStore.AddTrustedCertificateAsync(certificate);
+        logger.LogInformation("已添加信任证书: {Thumbprint}, 主题: {Subject}",
+            certificate.Thumbprint, certificate.Subject);
+    }
+
+    public async Task RemoveTrustedCertificateAsync(string thumbprint)
+    {
+        await certificateStore.RemoveTrustedCertificateAsync(thumbprint);
+        logger.LogInformation("已移除信任证书: {Thumbprint}", thumbprint);
+    }
+
+    private async Task<byte[]> ComputePackageHashAsync(string packagePath, string algorithm)
+    {
         await using var stream = File.OpenRead(packagePath);
-        
+
         return algorithm.ToUpperInvariant() switch
         {
             "SHA256" => await SHA256.HashDataAsync(stream),
@@ -169,39 +268,46 @@ public class PackageSignatureService(SecurityOptions securityOptions, ILogger<Pa
             _ => throw new NotSupportedException($"不支持的哈希算法: {algorithm}")
         };
     }
-    
-    private bool VerifySignature(byte[] hash, string signature)
+
+    private async Task<bool> VerifySignatureAsync(byte[] packageHash, PackageSignature signature)
     {
         try
         {
-            var signatureBytes = Convert.FromBase64String(signature);
-            
-            // 简化的验证逻辑（实际应用中应使用证书验证）
-            if (signatureBytes.Length < hash.Length)
+            // 从签名中提取公钥
+            var publicKeyPem = signature.Signer.PublicKey;
+            using var cert = X509Certificate2.CreateFromPem(publicKeyPem);
+            using var rsa = cert.GetRSAPublicKey();
+
+            if (rsa == null)
             {
+                logger.LogError("无法从证书获取 RSA 公钥");
                 return false;
             }
-            
-            // 检查签名是否包含哈希信息
-            if (securityOptions.EnableChecksumValidation)
+
+            // 解析签名数据
+            var signatureBytes = Convert.FromBase64String(signature.SignatureData);
+
+            // 确定哈希算法
+            var hashAlgorithmName = signature.HashAlgorithm.ToUpperInvariant() switch
             {
-                var signatureString = Encoding.UTF8.GetString(signatureBytes);
-                if (signatureString.Contains(':'))
-                {
-                    var parts = signatureString.Split(':');
-                    if (parts.Length == 2)
-                    {
-                        var storedHash = Convert.FromBase64String(parts[0]);
-                        return storedHash.SequenceEqual(hash);
-                    }
-                }
+                "SHA256" => HashAlgorithmName.SHA256,
+                "SHA512" => HashAlgorithmName.SHA512,
+                _ => throw new NotSupportedException($"不支持的哈希算法: {signature.HashAlgorithm}")
+            };
+
+            // 验证签名
+            var isValid = rsa.VerifyData(packageHash, signatureBytes, hashAlgorithmName, RSASignaturePadding.Pkcs1);
+
+            if (!isValid)
+            {
+                logger.LogWarning("RSA 签名验证失败");
             }
-            
-            return true;
+
+            return await Task.FromResult(isValid);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "验证签名失败");
+            logger.LogError(ex, "验证 RSA 签名时发生错误");
             return false;
         }
     }

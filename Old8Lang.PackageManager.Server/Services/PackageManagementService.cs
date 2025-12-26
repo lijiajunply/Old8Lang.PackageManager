@@ -26,6 +26,7 @@ public interface IPackageManagementService
 public class PackageManagementService(
     PackageManagerDbContext dbContext,
     IPackageStorageService storageService,
+    IPackageSignatureService signatureService,
     ILogger<PackageManagementService> logger,
     IPythonPackageParser pythonParser)
     : IPackageManagementService
@@ -118,23 +119,33 @@ public class PackageManagementService(
         {
             throw new InvalidOperationException("无法解析包信息");
         }
-        
+
         // 检查包是否已存在
         var existingPackage = await GetPackageAsync(packageInfo.Id, packageInfo.Version, request.Language);
         if (existingPackage != null)
         {
             throw new InvalidOperationException($"包 {packageInfo.Id} 版本 {packageInfo.Version} (语言: {request.Language}) 已存在");
         }
-        
+
         // 重置流位置
         packageStream.Position = 0;
-        
+
         // 存储包文件
         var packageFilePath = await storageService.StorePackageAsync(packageInfo.Id, packageInfo.Version, packageStream, "application/octet-stream");
-        
+
+        // 验证包签名 (如果已启用)
+        var signatureVerificationResult = await signatureService.VerifyPackageSignatureAsync(packageFilePath);
+        if (!signatureVerificationResult.IsValid)
+        {
+            logger.LogWarning("包签名验证失败: {PackageId} {Version}, 原因: {Message}",
+                packageInfo.Id, packageInfo.Version, signatureVerificationResult.Message);
+            // 注意: 这里不抛出异常，因为签名可能未启用或是可选的
+            // 如果需要强制签名验证，可以在这里抛出异常
+        }
+
         // 计算校验和
         var checksum = await storageService.CalculateChecksumAsync(packageFilePath);
-        
+
         // 创建包实体
         var packageEntity = new PackageEntity
         {
@@ -151,7 +162,10 @@ public class PackageManagementService(
             UpdatedAt = DateTime.UtcNow,
             DownloadCount = 0,
             IsListed = true,
-            IsPrerelease = request.IsPrerelease || IsPrereleaseVersion(packageInfo.Version)
+            IsPrerelease = request.IsPrerelease || IsPrereleaseVersion(packageInfo.Version),
+            IsSigned = signatureVerificationResult.IsValid,
+            SignedBy = signatureVerificationResult.Signature?.Signer.Name ?? signatureVerificationResult.Signature?.Signer.Email,
+            SignedAt = signatureVerificationResult.Signature?.Timestamp
         };
         
         // 添加标签

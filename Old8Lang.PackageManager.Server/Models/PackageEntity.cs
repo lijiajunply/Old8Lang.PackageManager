@@ -40,6 +40,22 @@ public class PackageEntity
 
     public bool IsPrerelease { get; set; }
 
+    /// <summary>
+    /// 是否已签名
+    /// </summary>
+    public bool IsSigned { get; set; }
+
+    /// <summary>
+    /// 签名者信息
+    /// </summary>
+    [MaxLength(200)]
+    public string? SignedBy { get; set; }
+
+    /// <summary>
+    /// 签名时间
+    /// </summary>
+    public DateTimeOffset? SignedAt { get; set; }
+
     [NotMapped] public List<string> Tags { get; set; } = new();
 
     [NotMapped] public List<PackageDependency> Dependencies { get; set; } = new();

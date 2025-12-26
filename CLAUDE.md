@@ -9,6 +9,7 @@ Old8Lang Package Manager (o8pm) is a NuGet-inspired package management system fo
 - ASP.NET Core REST API server with SQLite database
 - Vue 3 frontend with TypeScript and Naive UI
 - Multi-language package support (Old8Lang, Python, JavaScript/TypeScript)
+- **Package signature verification system** with RSA digital signatures
 
 ## Build & Development Commands
 
@@ -201,6 +202,14 @@ Main endpoints (prefix: `/api/v3`):
 - `DELETE /packages/{id}/{version}` - Delete package
 - `GET /health` - Health check
 
+Signature endpoints:
+- `GET /signatures/verify/{id}/{version}` - Verify package signature
+- `POST /signatures/sign/{id}/{version}` - Sign package
+- `GET /signatures/certificates/trusted` - Get trusted certificates
+- `POST /signatures/certificates/trusted` - Add trusted certificate
+- `POST /signatures/certificates/generate` - Generate certificate
+- `GET /signatures/certificates/export/{thumbprint}` - Export certificate
+
 PyPI compatibility: `/api/pypi/*`
 NPM compatibility: `/api/npm/*`
 
@@ -223,3 +232,40 @@ The test project uses in-memory databases for integration tests.
 - CORS is configured to allow all origins (development mode)
 - Rate limiting is commented out but implemented
 - The frontend expects API at `http://localhost:5000/api` by default
+
+## Package Signature Verification
+
+The system includes a comprehensive package signing and verification system:
+
+### Features
+- RSA-2048 digital signatures with SHA256/SHA512 hashing
+- X.509 certificate management (generate, import, trust)
+- Signature verification at upload and download
+- CLI commands: `sign`, `verify`, `cert`
+- REST API endpoints for signature management
+
+### CLI Commands
+```bash
+# Generate certificate
+o8pm cert generate "My Signer" --email "signer@example.com" --output mycert.pfx
+
+# Sign package
+o8pm sign mypackage.o8pkg --cert mycert.pfx
+
+# Verify signature
+o8pm verify mypackage.o8pkg
+```
+
+### Configuration
+```json
+{
+  "Security": {
+    "EnablePackageSigning": false,
+    "RequireTrustedCertificates": false,
+    "ValidateCertificateChain": false,
+    "AllowedHashAlgorithms": ["SHA256", "SHA512"]
+  }
+}
+```
+
+See [PACKAGE_SIGNING.md](PACKAGE_SIGNING.md) for complete documentation.

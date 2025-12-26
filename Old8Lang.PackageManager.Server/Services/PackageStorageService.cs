@@ -15,6 +15,7 @@ public interface IPackageStorageService
     Task<bool> DeletePackageAsync(string packageId, string version);
     Task<string> CalculateChecksumAsync(string filePath);
     Task<long> GetPackageSizeAsync(string packageId, string version);
+    Task<string?> GetPackagePathAsync(string packageId, string version);
 }
 
 /// <summary>
@@ -115,13 +116,27 @@ public class PackageStorageService : IPackageStorageService
         var packageDir = Path.Combine(_options.StoragePath, packageId.ToLowerInvariant(), version);
         var packageFileName = $"{packageId}.{version}.o8pkg";
         var packageFilePath = Path.Combine(packageDir, packageFileName);
-        
+
         if (!File.Exists(packageFilePath))
         {
             return 0;
         }
-        
+
         var fileInfo = new FileInfo(packageFilePath);
         return fileInfo.Length;
+    }
+
+    public async Task<string?> GetPackagePathAsync(string packageId, string version)
+    {
+        var packageDir = Path.Combine(_options.StoragePath, packageId.ToLowerInvariant(), version);
+        var packageFileName = $"{packageId}.{version}.o8pkg";
+        var packageFilePath = Path.Combine(packageDir, packageFileName);
+
+        if (!File.Exists(packageFilePath))
+        {
+            return null;
+        }
+
+        return await Task.FromResult(packageFilePath);
     }
 }

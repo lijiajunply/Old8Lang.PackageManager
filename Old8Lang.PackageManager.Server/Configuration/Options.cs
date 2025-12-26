@@ -113,19 +113,30 @@ public class SecurityOptions
     /// 是否启用包签名验证
     /// </summary>
     public bool EnablePackageSigning { get; set; } = false;
-    
+
     /// <summary>
-    /// 信任的签名证书指纹
+    /// 是否要求证书必须在信任列表中
     /// </summary>
+    public bool RequireTrustedCertificates { get; set; } = false;
+
+    /// <summary>
+    /// 是否验证证书链
+    /// </summary>
+    public bool ValidateCertificateChain { get; set; } = false;
+
+    /// <summary>
+    /// 信任的签名证书指纹 (已废弃，使用 CertificateStore)
+    /// </summary>
+    [Obsolete("使用 ICertificateStore 管理信任证书")]
     public List<string> TrustedCertificates { get; set; } = new();
-    
+
     /// <summary>
     /// 是否校验包完整性
     /// </summary>
     public bool EnableChecksumValidation { get; set; } = true;
-    
+
     /// <summary>
-    /// 允许的算法
+    /// 允许的哈希算法
     /// </summary>
     public List<string> AllowedHashAlgorithms { get; set; } = new() { "SHA256", "SHA512" };
 }

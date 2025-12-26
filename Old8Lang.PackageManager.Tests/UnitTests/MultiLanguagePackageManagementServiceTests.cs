@@ -34,10 +34,12 @@ public class MultiLanguagePackageManagementServiceTests
         _mockStorageService = new Mock<IPackageStorageService>();
         _mockPythonParser = new Mock<IPythonPackageParser>();
         _mockLogger = new Mock<ILogger<PackageManagementService>>();
-        
+        var mockSignatureService = new Mock<IPackageSignatureService>();
+
         _service = new PackageManagementService(
             _mockDbContext.Object,
             _mockStorageService.Object,
+            mockSignatureService.Object,
             _mockLogger.Object,
             _mockPythonParser.Object);
     }
@@ -254,10 +256,12 @@ public class MultiLanguagePackageManagementServiceTests
             var mockStorageService = new Mock<IPackageStorageService>();
             var mockPythonParser = new Mock<IPythonPackageParser>();
             var mockLogger = new Mock<ILogger<PackageManagementService>>();
-            
+            var mockSignatureService = new Mock<IPackageSignatureService>();
+
             var service = new PackageManagementService(
-                context, 
-                mockStorageService.Object, 
+                context,
+                mockStorageService.Object,
+                mockSignatureService.Object,
                 mockLogger.Object,
                 mockPythonParser.Object);
 
