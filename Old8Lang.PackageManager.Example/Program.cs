@@ -13,6 +13,7 @@ var configManager = new DefaultPackageConfigurationManager();
 var installer = new DefaultPackageInstaller(sourceManager, resolver);
 var restorer = new PackageRestorer(configManager, installer, sourceManager);
 var signatureService = new PackageSignatureService();
+var archiveService = new PackageArchiveService();
 
 // 创建命令包装器
 var coreCommands = new List<ICommand>
@@ -27,7 +28,9 @@ var exampleCommands = new List<ICommand>
 {
     new SignPackageCommand(signatureService),
     new VerifyPackageCommand(signatureService),
-    new CertificateCommand(signatureService)
+    new CertificateCommand(signatureService),
+    new PackCommand(archiveService),
+    new UnpackCommand(archiveService)
 };
 
 //创建一个统一的命令映射
@@ -67,6 +70,10 @@ void ShowHelp()
     Console.WriteLine("  restore                        Restore all packages");
     Console.WriteLine("  search <term>                  Search for packages");
     Console.WriteLine();
+    Console.WriteLine("Package Archive Commands:");
+    Console.WriteLine("  pack <folder>                  Pack a folder into .o8pkg archive");
+    Console.WriteLine("  unpack <file>                  Unpack a .o8pkg archive");
+    Console.WriteLine();
     Console.WriteLine("Signature Commands:");
     Console.WriteLine("  sign <package-path>            Sign a package with a certificate");
     Console.WriteLine("  verify <package-path>          Verify a package signature");
@@ -80,6 +87,8 @@ void ShowHelp()
     Console.WriteLine("  o8pm remove MyPackage");
     Console.WriteLine("  o8pm restore");
     Console.WriteLine("  o8pm search logger");
+    Console.WriteLine("  o8pm pack ./MyPackage");
+    Console.WriteLine("  o8pm unpack MyPackage.1.0.0.o8pkg");
     Console.WriteLine("  o8pm sign MyPackage.1.0.0.o8pkg");
     Console.WriteLine("  o8pm verify MyPackage.1.0.0.o8pkg");
     Console.WriteLine("  o8pm cert generate \"My Certificate\"");

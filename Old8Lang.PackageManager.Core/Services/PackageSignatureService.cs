@@ -14,7 +14,14 @@ public class PackageSignatureService : IPackageSignatureService
     private const string DefaultHashAlgorithm = "SHA256";
     private const int DefaultRsaKeySize = 2048;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// 签名包
+    /// </summary>
+    /// <param name="packagePath">包路径</param>
+    /// <param name="certificate">正式</param>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException">文件未找到</exception>
+    /// <exception cref="InvalidOperationException">没有私钥</exception>
     public async Task<PackageSignature> SignPackageAsync(string packagePath, X509Certificate2 certificate)
     {
         if (!File.Exists(packagePath))
@@ -60,7 +67,13 @@ public class PackageSignatureService : IPackageSignatureService
         };
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// 验证签名
+    /// </summary>
+    /// <param name="packagePath"></param>
+    /// <param name="signature"></param>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException"></exception>
     public async Task<bool> VerifySignatureAsync(string packagePath, PackageSignature signature)
     {
         if (!File.Exists(packagePath))
@@ -114,8 +127,12 @@ public class PackageSignatureService : IPackageSignatureService
         var signatureJson = await File.ReadAllTextAsync(signatureFilePath);
         return JsonSerializer.Deserialize<PackageSignature>(signatureJson);
     }
-
-    /// <inheritdoc/>
+    
+    /// <summary>
+    /// 写入签名
+    /// </summary>
+    /// <param name="signature"></param>
+    /// <param name="signatureFilePath"></param>
     public async Task WriteSignatureAsync(PackageSignature signature, string signatureFilePath)
     {
         var signatureJson = JsonSerializer.Serialize(signature, new JsonSerializerOptions
@@ -125,7 +142,13 @@ public class PackageSignatureService : IPackageSignatureService
         await File.WriteAllTextAsync(signatureFilePath, signatureJson);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// 生成自签名证书
+    /// </summary>
+    /// <param name="subjectName"></param>
+    /// <param name="email"></param>
+    /// <param name="validityYears"></param>
+    /// <returns></returns>
     public X509Certificate2 GenerateSelfSignedCertificate(string subjectName, string? email = null,
         int validityYears = 5)
     {
@@ -171,7 +194,12 @@ public class PackageSignatureService : IPackageSignatureService
             : X509CertificateLoader.LoadPkcs12(certBytes, password);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// 导出证书
+    /// </summary>
+    /// <param name="certificate"></param>
+    /// <param name="outputPath"></param>
+    /// <param name="password"></param>
     public async Task ExportCertificateAsync(X509Certificate2 certificate, string outputPath, string? password = null)
     {
         var exportBytes = string.IsNullOrEmpty(password)
@@ -181,7 +209,11 @@ public class PackageSignatureService : IPackageSignatureService
         await File.WriteAllBytesAsync(outputPath, exportBytes);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// 获取证书信息
+    /// </summary>
+    /// <param name="certificate"></param>
+    /// <returns></returns>
     public string GetCertificateInfo(X509Certificate2 certificate)
     {
         var status = certificate.NotAfter < DateTime.UtcNow ? "EXPIRED" : "Valid";
