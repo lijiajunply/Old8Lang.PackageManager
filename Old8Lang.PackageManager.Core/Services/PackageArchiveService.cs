@@ -11,13 +11,21 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// </summary>
 public class PackageArchiveService : IPackageArchiveService
 {
-    private const string PackageMetadataFileName = "package.json";
-    private const string PackageExtension = ".o8pkg";
+    /// <summary>
+    /// 包元数据文件名
+    /// </summary>
+    public string PackageMetadataFileName { get; set; } = "package.json";
+
+    /// <summary>
+    /// 包扩展名
+    /// </summary>
+    public string PackageExtension { get; set; } = ".o8pkg";
 
     /// <summary>
     /// 将包文件夹打包成 .o8pkg 压缩包
     /// </summary>
-    public async Task<string> PackAsync(string sourcePath, string? outputPath = null, CancellationToken cancellationToken = default)
+    public async Task<string> PackAsync(string sourcePath, string? outputPath = null,
+        CancellationToken cancellationToken = default)
     {
         if (!Directory.Exists(sourcePath))
         {
@@ -56,10 +64,8 @@ public class PackageArchiveService : IPackageArchiveService
         }
 
         // 创建 ZIP 压缩包
-        await Task.Run(() =>
-        {
-            ZipFile.CreateFromDirectory(sourcePath, outputPath, CompressionLevel.Optimal, false);
-        }, cancellationToken);
+        await Task.Run(() => { ZipFile.CreateFromDirectory(sourcePath, outputPath, CompressionLevel.Optimal, false); },
+            cancellationToken);
 
         // 计算包文件大小和校验和
         var fileInfo = new FileInfo(outputPath);
@@ -74,7 +80,8 @@ public class PackageArchiveService : IPackageArchiveService
     /// <summary>
     /// 解包 .o8pkg 文件到指定文件夹
     /// </summary>
-    public async Task UnpackAsync(string packagePath, string destinationPath, CancellationToken cancellationToken = default)
+    public async Task UnpackAsync(string packagePath, string destinationPath,
+        CancellationToken cancellationToken = default)
     {
         if (!File.Exists(packagePath))
         {
@@ -83,7 +90,8 @@ public class PackageArchiveService : IPackageArchiveService
 
         if (!packagePath.EndsWith(PackageExtension, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException($"Invalid package file extension. Expected {PackageExtension}", nameof(packagePath));
+            throw new ArgumentException($"Invalid package file extension. Expected {PackageExtension}",
+                nameof(packagePath));
         }
 
         // 如果目标文件夹已存在，清空它
@@ -95,10 +103,7 @@ public class PackageArchiveService : IPackageArchiveService
         Directory.CreateDirectory(destinationPath);
 
         // 解压 ZIP 文件
-        await Task.Run(() =>
-        {
-            ZipFile.ExtractToDirectory(packagePath, destinationPath);
-        }, cancellationToken);
+        await Task.Run(() => { ZipFile.ExtractToDirectory(packagePath, destinationPath); }, cancellationToken);
     }
 
     /// <summary>
