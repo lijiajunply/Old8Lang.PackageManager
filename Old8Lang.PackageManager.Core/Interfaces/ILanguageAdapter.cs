@@ -86,6 +86,7 @@ public class PackageMetadata
 /// <summary>
 /// 依赖信息
 /// </summary>
+[Serializable]
 public class DependencyInfo
 {
     /// <summary>
