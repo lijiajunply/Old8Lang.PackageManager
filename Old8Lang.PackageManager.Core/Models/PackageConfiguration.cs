@@ -7,7 +7,7 @@ namespace Old8Lang.PackageManager.Core.Models;
 public class PackageConfiguration
 {
     /// <summary>
-    /// 配置文件版本
+    /// 语言版本
     /// </summary>
     public string Version { get; set; } = "1.0.0";
 
@@ -74,4 +74,9 @@ public class PackageReference
     /// 版本
     /// </summary>
     public string Version { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否为开发依赖
+    /// </summary>
+    public bool IsDevDependency { get; set; } = false;
 }
