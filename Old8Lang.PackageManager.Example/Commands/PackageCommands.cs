@@ -1,4 +1,4 @@
-namespace Old8Lang.PackageManager.Core.Commands;
+namespace Old8Lang.PackageManager.Commands;
 
 /// <summary>
 /// 命令结果
@@ -35,12 +35,12 @@ public interface ICommand
 /// 添加包命令
 /// </summary>
 public class AddPackageCommand(
-    Services.DefaultPackageInstaller installer,
-    Services.PackageSourceManager sourceManager,
-    Services.DefaultPackageConfigurationManager configManager)
+    Core.Services.DefaultPackageInstaller installer,
+    Core.Services.PackageSourceManager sourceManager,
+    Core.Services.DefaultPackageConfigurationManager configManager)
     : ICommand
 {
-    private readonly Services.PackageSourceManager _sourceManager = sourceManager;
+    private readonly Core.Services.PackageSourceManager _sourceManager = sourceManager;
 
     public string Name => "add";
     public string Description => "Add a package to the project";
@@ -115,21 +115,13 @@ public class AddPackageCommand(
 /// <summary>
 /// 移除包命令
 /// </summary>
-public class RemovePackageCommand : ICommand
+public class RemovePackageCommand(
+    Core.Services.DefaultPackageInstaller installer,
+    Core.Services.DefaultPackageConfigurationManager configManager)
+    : ICommand
 {
-    private readonly Services.DefaultPackageInstaller _installer;
-    private readonly Services.DefaultPackageConfigurationManager _configManager;
-
     public string Name => "remove";
     public string Description => "Remove a package from the project";
-
-    public RemovePackageCommand(
-        Services.DefaultPackageInstaller installer,
-        Services.DefaultPackageConfigurationManager configManager)
-    {
-        _installer = installer;
-        _configManager = configManager;
-    }
 
     public async Task<CommandResult> ExecuteAsync(string[] args)
     {
@@ -148,18 +140,18 @@ public class RemovePackageCommand : ICommand
         try
         {
             var configPath = FindConfigFile();
-            var config = await _configManager.ReadConfigurationAsync(configPath);
+            var config = await configManager.ReadConfigurationAsync(configPath);
 
             // 从配置文件移除
-            var removedFromConfig = await _configManager.RemovePackageReferenceAsync(configPath, packageId);
+            var removedFromConfig = await configManager.RemovePackageReferenceAsync(configPath, packageId);
 
             // 从磁盘移除所有版本
-            var installedPackages = await _installer.GetInstalledPackagesAsync(config.InstallPath);
+            var installedPackages = await installer.GetInstalledPackagesAsync(config.InstallPath);
             var packagesToRemove = installedPackages.Where(p => p.Id == packageId);
 
             foreach (var package in packagesToRemove)
             {
-                await _installer.UninstallPackageAsync(package.Id, package.Version, config.InstallPath);
+                await installer.UninstallPackageAsync(package.Id, package.Version, config.InstallPath);
             }
 
             return new CommandResult
@@ -197,12 +189,12 @@ public class RemovePackageCommand : ICommand
 /// </summary>
 public class RestoreCommand : ICommand
 {
-    private readonly Services.PackageRestorer _restorer;
+    private readonly Core.Services.PackageRestorer _restorer;
 
     public string Name => "restore";
     public string Description => "Restore all packages defined in the configuration file";
 
-    public RestoreCommand(Services.PackageRestorer restorer)
+    public RestoreCommand(Core.Services.PackageRestorer restorer)
     {
         _restorer = restorer;
     }
@@ -250,12 +242,12 @@ public class RestoreCommand : ICommand
 /// </summary>
 public class SearchCommand : ICommand
 {
-    private readonly Services.PackageSourceManager _sourceManager;
+    private readonly Core.Services.PackageSourceManager _sourceManager;
 
     public string Name => "search";
     public string Description => "Search for packages";
 
-    public SearchCommand(Services.PackageSourceManager sourceManager)
+    public SearchCommand(Core.Services.PackageSourceManager sourceManager)
     {
         _sourceManager = sourceManager;
     }
