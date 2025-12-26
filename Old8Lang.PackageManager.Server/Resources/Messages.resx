@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" msdata:Ordinal="5" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Common Messages -->
+  <data name="SearchPackageFailed" xml:space="preserve">
+    <value>Search packages failed</value>
+  </data>
+  <data name="GetPopularPackagesFailed" xml:space="preserve">
+    <value>Get popular packages failed</value>
+  </data>
+  <data name="PackageNotFound" xml:space="preserve">
+    <value>Package not found</value>
+  </data>
+  <data name="GetPackageDetailsFailed" xml:space="preserve">
+    <value>Get package details failed</value>
+  </data>
+  <data name="ApiKeyRequired" xml:space="preserve">
+    <value>API key required</value>
+  </data>
+  <data name="InvalidApiKey" xml:space="preserve">
+    <value>Invalid API key</value>
+  </data>
+  <data name="NoPackageFile" xml:space="preserve">
+    <value>No package file provided</value>
+  </data>
+  <data name="InvalidFileFormat" xml:space="preserve">
+    <value>Invalid file format</value>
+  </data>
+  <data name="PackageUploadFailed" xml:space="preserve">
+    <value>Package upload failed</value>
+  </data>
+  <data name="PackageDeleteSuccess" xml:space="preserve">
+    <value>Package deleted successfully</value>
+  </data>
+  <data name="PackageDeleteFailed" xml:space="preserve">
+    <value>Package delete failed</value>
+  </data>
+  <data name="PackageFileNotFound" xml:space="preserve">
+    <value>Package file not found</value>
+  </data>
+  <data name="DownloadPackageFailed" xml:space="preserve">
+    <value>Download package failed</value>
+  </data>
+  <data name="QualityScoreNotFound" xml:space="preserve">
+    <value>Package not found or quality score not calculated</value>
+  </data>
+  <data name="GetQualityScoreFailed" xml:space="preserve">
+    <value>Get quality score failed</value>
+  </data>
+  <data name="QualityScoreRecalculated" xml:space="preserve">
+    <value>Quality score recalculated</value>
+  </data>
+  <data name="RecalculateQualityScoreFailed" xml:space="preserve">
+    <value>Recalculate quality score failed</value>
+  </data>
+  <data name="AdminRequired" xml:space="preserve">
+    <value>Admin permission required</value>
+  </data>
+  <data name="AllQualityScoresRecalculated" xml:space="preserve">
+    <value>All quality scores recalculated</value>
+  </data>
+  <data name="RecalculateAllQualityScoresFailed" xml:space="preserve">
+    <value>Recalculate all quality scores failed</value>
+  </data>
+  <data name="InvalidMaxDepth" xml:space="preserve">
+    <value>Max depth must be between 1 and 50</value>
+  </data>
+  <data name="GetDependencyTreeFailed" xml:space="preserve">
+    <value>Get dependency tree failed</value>
+  </data>
+  <data name="GetDependencyGraphFailed" xml:space="preserve">
+    <value>Get dependency graph failed</value>
+  </data>
+  <data name="DetectCircularDependenciesFailed" xml:space="preserve">
+    <value>Detect circular dependencies failed</value>
+  </data>
+
+  <!-- Service Index -->
+  <data name="SearchQueryService" xml:space="preserve">
+    <value>Search query service</value>
+  </data>
+  <data name="PackageIndexService" xml:space="preserve">
+    <value>Package index service</value>
+  </data>
+  <data name="PackageDownloadService" xml:space="preserve">
+    <value>Package download service</value>
+  </data>
+  <data name="PackagePublishService" xml:space="preserve">
+    <value>Package publish service</value>
+  </data>
+</root>

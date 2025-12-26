@@ -9,7 +9,7 @@
 
     <!-- NuGet 包配置 -->
     <PackageId>Old8Lang.PackageManager.Core</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Old8Lang Team</Authors>
     <Company>Old8Lang</Company>
     <Product>Old8Lang Package Manager Core</Product>
@@ -22,6 +22,8 @@
 - 版本控制：完整的语义化版本支持
 - 扩展性强：基于接口设计，易于扩展
 - 语言无关：可被任何编程语言的包管理系统使用
+- 包签名：支持包签名，保证包的完整性和真实性
+- 包打包：支持包打包，将包保存为文件        
 
 适用场景：
 - 脚本语言的包管理系统
@@ -35,7 +37,7 @@
     <PackageTags>package-manager;dependency-resolver;version-control;old8lang;scripting;package-management;nuget;dependency-management;package-resolution;language-agnostic</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>v1.0.0 - 初始版本
+    <PackageReleaseNotes>v1.1.0
 - 完整的包解析功能
 - 依赖关系智能解析
 - 多包源管理

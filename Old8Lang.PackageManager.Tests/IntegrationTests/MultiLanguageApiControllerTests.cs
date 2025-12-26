@@ -39,6 +39,7 @@ public class MultiLanguageApiControllerTests
             new Mock<IPackageDependencyService>().Object,
             new Mock<IApiKeyService>().Object,
             new Mock<ApiOptions>().Object,
+            new Mock<ILocalizationService>().Object,
             _mockLogger.Object);
 
         _pyPiController = new PyPIController(

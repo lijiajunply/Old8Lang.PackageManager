@@ -45,6 +45,9 @@ import {
 // 导入路由
 import routes from './router'
 
+// 导入 i18n
+import i18n from './i18n'
+
 // 导入样式
 import 'tailwindcss/tailwind.css'
 import './assets/styles/main.css'
@@ -94,5 +97,6 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(naive)
+app.use(i18n)
 
 app.mount('#app')

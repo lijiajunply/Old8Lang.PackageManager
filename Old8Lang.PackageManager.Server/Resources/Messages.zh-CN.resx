@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" msdata:Ordinal="5" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Common Messages -->
+  <data name="SearchPackageFailed" xml:space="preserve">
+    <value>搜索包失败</value>
+  </data>
+  <data name="GetPopularPackagesFailed" xml:space="preserve">
+    <value>获取热门包失败</value>
+  </data>
+  <data name="PackageNotFound" xml:space="preserve">
+    <value>包不存在</value>
+  </data>
+  <data name="GetPackageDetailsFailed" xml:space="preserve">
+    <value>获取包详细信息失败</value>
+  </data>
+  <data name="ApiKeyRequired" xml:space="preserve">
+    <value>需要 API 密钥</value>
+  </data>
+  <data name="InvalidApiKey" xml:space="preserve">
+    <value>无效的 API 密钥</value>
+  </data>
+  <data name="NoPackageFile" xml:space="preserve">
+    <value>未提供包文件</value>
+  </data>
+  <data name="InvalidFileFormat" xml:space="preserve">
+    <value>不支持的文件格式</value>
+  </data>
+  <data name="PackageUploadFailed" xml:space="preserve">
+    <value>包上传失败</value>
+  </data>
+  <data name="PackageDeleteSuccess" xml:space="preserve">
+    <value>包删除成功</value>
+  </data>
+  <data name="PackageDeleteFailed" xml:space="preserve">
+    <value>删除包失败</value>
+  </data>
+  <data name="PackageFileNotFound" xml:space="preserve">
+    <value>包文件不存在</value>
+  </data>
+  <data name="DownloadPackageFailed" xml:space="preserve">
+    <value>下载包失败</value>
+  </data>
+  <data name="QualityScoreNotFound" xml:space="preserve">
+    <value>包不存在或质量评分未计算</value>
+  </data>
+  <data name="GetQualityScoreFailed" xml:space="preserve">
+    <value>获取包质量评分失败</value>
+  </data>
+  <data name="QualityScoreRecalculated" xml:space="preserve">
+    <value>质量评分已重新计算</value>
+  </data>
+  <data name="RecalculateQualityScoreFailed" xml:space="preserve">
+    <value>重新计算包质量评分失败</value>
+  </data>
+  <data name="AdminRequired" xml:space="preserve">
+    <value>需要管理员权限</value>
+  </data>
+  <data name="AllQualityScoresRecalculated" xml:space="preserve">
+    <value>所有包的质量评分已重新计算</value>
+  </data>
+  <data name="RecalculateAllQualityScoresFailed" xml:space="preserve">
+    <value>重新计算所有包质量评分失败</value>
+  </data>
+  <data name="InvalidMaxDepth" xml:space="preserve">
+    <value>最大深度必须在 1 到 50 之间</value>
+  </data>
+  <data name="GetDependencyTreeFailed" xml:space="preserve">
+    <value>获取依赖树失败</value>
+  </data>
+  <data name="GetDependencyGraphFailed" xml:space="preserve">
+    <value>获取依赖图失败</value>
+  </data>
+  <data name="DetectCircularDependenciesFailed" xml:space="preserve">
+    <value>检测循环依赖失败</value>
+  </data>
+
+  <!-- Service Index -->
+  <data name="SearchQueryService" xml:space="preserve">
+    <value>查询包服务</value>
+  </data>
+  <data name="PackageIndexService" xml:space="preserve">
+    <value>包索引服务</value>
+  </data>
+  <data name="PackageDownloadService" xml:space="preserve">
+    <value>包下载服务</value>
+  </data>
+  <data name="PackagePublishService" xml:space="preserve">
+    <value>包发布服务</value>
+  </data>
+</root>

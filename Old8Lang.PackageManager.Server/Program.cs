@@ -4,6 +4,8 @@ using Old8Lang.PackageManager.Server.Configuration;
 using Old8Lang.PackageManager.Server.Data;
 using Old8Lang.PackageManager.Server.Services;
 using Old8Lang.PackageManager.Server.Extensions;
+using Old8Lang.PackageManager.Server.Middleware;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,7 +78,23 @@ builder.Services.AddScoped<ICertificateManagementService, CertificateManagementS
 builder.Services.AddScoped<IPackageQualityService, PackageQualityService>();
 builder.Services.AddScoped<IPackageDependencyService, PackageDependencyService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<OidcAuthenticationService>();
+
+// 添加本地化支持
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[]
+    {
+        new CultureInfo("en"),
+        new CultureInfo("zh-CN")
+    };
+
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+});
 
 // 添加控制器
 builder.Services.AddControllers();
@@ -129,6 +147,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors();
+
+// 启用语言中间件
+app.UseLanguageMiddleware();
 
 // app.UseRateLimiter();
 

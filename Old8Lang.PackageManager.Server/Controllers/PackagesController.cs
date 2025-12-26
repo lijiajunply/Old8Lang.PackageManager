@@ -20,6 +20,7 @@ public class PackagesController(
     IPackageDependencyService dependencyService,
     IApiKeyService apiKeyService,
     ApiOptions apiOptions,
+    ILocalizationService localization,
     ILogger<PackagesController> logger)
     : ControllerBase
 {
@@ -47,7 +48,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "搜索包失败: {Query}", q);
-            return StatusCode(500, ApiResponse<object>.ErrorResult("搜索包失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("SearchPackageFailed")));
         }
     }
 
@@ -69,7 +70,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取热门包失败");
-            return StatusCode(500, ApiResponse<object>.ErrorResult("获取热门包失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("GetPopularPackagesFailed")));
         }
     }
 
@@ -100,7 +101,7 @@ public class PackagesController(
 
             if (result == null)
             {
-                return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
+                return NotFound(ApiResponse<object>.ErrorResult(localization.GetString("PackageNotFound"), "PACKAGE_NOT_FOUND"));
             }
 
             return Ok(result);
@@ -108,7 +109,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取包详细信息失败: {PackageId} {Version} {Language}", id, version, language);
-            return StatusCode(500, ApiResponse<object>.ErrorResult("获取包详细信息失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("GetPackageDetailsFailed")));
         }
     }
 
@@ -128,13 +129,13 @@ public class PackagesController(
                 var apiKey = GetApiKeyFromRequest();
                 if (string.IsNullOrEmpty(apiKey))
                 {
-                    return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
+                    return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("ApiKeyRequired"), "API_KEY_REQUIRED"));
                 }
 
                 var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
-                    return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
+                    return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("InvalidApiKey"), "INVALID_API_KEY"));
                 }
 
                 // 检查权限
@@ -147,14 +148,14 @@ public class PackagesController(
             // 验证文件
             if (request.PackageFile.Length == 0)
             {
-                return BadRequest(ApiResponse<object>.ErrorResult("未提供包文件", "NO_PACKAGE_FILE"));
+                return BadRequest(ApiResponse<object>.ErrorResult(localization.GetString("NoPackageFile"), "NO_PACKAGE_FILE"));
             }
 
             // 验证文件扩展名
             var fileExtension = Path.GetExtension(request.PackageFile.FileName).ToLowerInvariant();
             if (fileExtension != ".o8pkg")
             {
-                return BadRequest(ApiResponse<object>.ErrorResult("不支持的文件格式", "INVALID_FILE_FORMAT"));
+                return BadRequest(ApiResponse<object>.ErrorResult(localization.GetString("InvalidFileFormat"), "INVALID_FILE_FORMAT"));
             }
 
             // 上传包
@@ -196,7 +197,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "包上传失败");
-            return StatusCode(500, ApiResponse<object>.ErrorResult("包上传失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("PackageUploadFailed")));
         }
     }
 
@@ -216,13 +217,13 @@ public class PackagesController(
                 var apiKey = GetApiKeyFromRequest();
                 if (string.IsNullOrEmpty(apiKey))
                 {
-                    return Unauthorized(ApiResponse<object>.ErrorResult("需要 API 密钥", "API_KEY_REQUIRED"));
+                    return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("ApiKeyRequired"), "API_KEY_REQUIRED"));
                 }
 
                 var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
                 if (keyEntity == null)
                 {
-                    return Unauthorized(ApiResponse<object>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
+                    return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("InvalidApiKey"), "INVALID_API_KEY"));
                 }
 
                 // 检查权限
@@ -235,15 +236,15 @@ public class PackagesController(
             var result = await packageService.DeletePackageAsync(id, version);
             if (!result)
             {
-                return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
+                return NotFound(ApiResponse<object>.ErrorResult(localization.GetString("PackageNotFound"), "PACKAGE_NOT_FOUND"));
             }
 
-            return Ok(ApiResponse<object>.SuccessResult(null, "包删除成功"));
+            return Ok(ApiResponse<object>.SuccessResult(null, localization.GetString("PackageDeleteSuccess")));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "删除包失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<object>.ErrorResult("删除包失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("PackageDeleteFailed")));
         }
     }
 
@@ -260,14 +261,14 @@ public class PackagesController(
             var package = await packageService.GetPackageAsync(id, version);
             if (package == null)
             {
-                return NotFound(ApiResponse<object>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
+                return NotFound(ApiResponse<object>.ErrorResult(localization.GetString("PackageNotFound"), "PACKAGE_NOT_FOUND"));
             }
 
             // 获取包文件流
             var packageStream = await GetPackageFileStreamAsync(id, version);
             if (packageStream == null)
             {
-                return NotFound(ApiResponse<object>.ErrorResult("包文件不存在", "PACKAGE_FILE_NOT_FOUND"));
+                return NotFound(ApiResponse<object>.ErrorResult(localization.GetString("PackageFileNotFound"), "PACKAGE_FILE_NOT_FOUND"));
             }
 
             // 增加下载计数
@@ -279,7 +280,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "下载包失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<object>.ErrorResult("下载包失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("DownloadPackageFailed")));
         }
     }
 
@@ -321,7 +322,7 @@ public class PackagesController(
             var score = await qualityService.GetQualityScoreAsync(id, version);
             if (score == null)
             {
-                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult("包不存在或质量评分未计算", "QUALITY_SCORE_NOT_FOUND"));
+                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("QualityScoreNotFound"), "QUALITY_SCORE_NOT_FOUND"));
             }
 
             var qualityScoreDto = new PackageQualityScore
@@ -341,7 +342,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取包质量评分失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult("获取包质量评分失败"));
+            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("GetQualityScoreFailed")));
         }
     }
 
@@ -359,7 +360,7 @@ public class PackagesController(
             var apiKey = GetApiKeyFromRequest();
             if (apiOptions.RequireApiKey && string.IsNullOrEmpty(apiKey))
             {
-                return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult("需要提供有效的 API 密钥", "API_KEY_REQUIRED"));
+                return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("ApiKeyRequired"), "API_KEY_REQUIRED"));
             }
 
             if (apiOptions.RequireApiKey)
@@ -367,14 +368,14 @@ public class PackagesController(
                 var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey!);
                 if (keyEntity == null)
                 {
-                    return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult("无效的 API 密钥", "INVALID_API_KEY"));
+                    return Unauthorized(ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("InvalidApiKey"), "INVALID_API_KEY"));
                 }
             }
 
             var package = await packageService.GetPackageAsync(id, version);
             if (package == null)
             {
-                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult("包不存在", "PACKAGE_NOT_FOUND"));
+                return NotFound(ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("PackageNotFound"), "PACKAGE_NOT_FOUND"));
             }
 
             var newScore = await qualityService.CalculateQualityScoreAsync(package);
@@ -391,12 +392,12 @@ public class PackagesController(
                 LastCalculatedAt = newScore.LastCalculatedAt
             };
 
-            return Ok(ApiResponse<PackageQualityScore>.SuccessResult(qualityScoreDto, "质量评分已重新计算"));
+            return Ok(ApiResponse<PackageQualityScore>.SuccessResult(qualityScoreDto, localization.GetString("QualityScoreRecalculated")));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "重新计算包质量评分失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult("重新计算包质量评分失败"));
+            return StatusCode(500, ApiResponse<PackageQualityScore>.ErrorResult(localization.GetString("RecalculateQualityScoreFailed")));
         }
     }
 
@@ -412,23 +413,23 @@ public class PackagesController(
             var apiKey = GetApiKeyFromRequest();
             if (string.IsNullOrEmpty(apiKey))
             {
-                return Unauthorized(ApiResponse<object>.ErrorResult("需要提供有效的 API 密钥", "API_KEY_REQUIRED"));
+                return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("ApiKeyRequired"), "API_KEY_REQUIRED"));
             }
 
             var keyEntity = await apiKeyService.ValidateApiKeyAsync(apiKey);
             if (keyEntity == null || !keyEntity.Scopes.Contains("admin:all"))
             {
-                return Unauthorized(ApiResponse<object>.ErrorResult("需要管理员权限", "ADMIN_REQUIRED"));
+                return Unauthorized(ApiResponse<object>.ErrorResult(localization.GetString("AdminRequired"), "ADMIN_REQUIRED"));
             }
 
             await qualityService.RecalculateAllScoresAsync();
 
-            return Ok(ApiResponse<object>.SuccessResult(null, "所有包的质量评分已重新计算"));
+            return Ok(ApiResponse<object>.SuccessResult(null, localization.GetString("AllQualityScoresRecalculated")));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "重新计算所有包质量评分失败");
-            return StatusCode(500, ApiResponse<object>.ErrorResult("重新计算所有包质量评分失败"));
+            return StatusCode(500, ApiResponse<object>.ErrorResult(localization.GetString("RecalculateAllQualityScoresFailed")));
         }
     }
 
@@ -448,7 +449,7 @@ public class PackagesController(
         {
             if (maxDepth < 1 || maxDepth > 50)
             {
-                return BadRequest(ApiResponse<DependencyTreeResponse>.ErrorResult("最大深度必须在 1 到 50 之间", "INVALID_MAX_DEPTH"));
+                return BadRequest(ApiResponse<DependencyTreeResponse>.ErrorResult(localization.GetString("InvalidMaxDepth"), "INVALID_MAX_DEPTH"));
             }
 
             var tree = await dependencyService.GetDependencyTreeAsync(id, version, maxDepth);
@@ -462,7 +463,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取依赖树失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<DependencyTreeResponse>.ErrorResult("获取依赖树失败"));
+            return StatusCode(500, ApiResponse<DependencyTreeResponse>.ErrorResult(localization.GetString("GetDependencyTreeFailed")));
         }
     }
 
@@ -482,7 +483,7 @@ public class PackagesController(
         {
             if (maxDepth < 1 || maxDepth > 50)
             {
-                return BadRequest(ApiResponse<DependencyGraphResponse>.ErrorResult("最大深度必须在 1 到 50 之间", "INVALID_MAX_DEPTH"));
+                return BadRequest(ApiResponse<DependencyGraphResponse>.ErrorResult(localization.GetString("InvalidMaxDepth"), "INVALID_MAX_DEPTH"));
             }
 
             var graph = await dependencyService.GetDependencyGraphAsync(id, version, maxDepth);
@@ -496,7 +497,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取依赖图失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<DependencyGraphResponse>.ErrorResult("获取依赖图失败"));
+            return StatusCode(500, ApiResponse<DependencyGraphResponse>.ErrorResult(localization.GetString("GetDependencyGraphFailed")));
         }
     }
 
@@ -523,7 +524,7 @@ public class PackagesController(
         catch (Exception ex)
         {
             logger.LogError(ex, "检测循环依赖失败: {PackageId} {Version}", id, version);
-            return StatusCode(500, ApiResponse<List<string>>.ErrorResult("检测循环依赖失败"));
+            return StatusCode(500, ApiResponse<List<string>>.ErrorResult(localization.GetString("DetectCircularDependenciesFailed")));
         }
     }
 }
@@ -533,7 +534,7 @@ public class PackagesController(
 /// </summary>
 [ApiController]
 [Route("v3/index.json")]
-public class ServiceIndexController(ApiOptions apiOptions) : ControllerBase
+public class ServiceIndexController(ApiOptions apiOptions, ILocalizationService localization) : ControllerBase
 {
     /// <summary>
     /// 获取服务索引
@@ -551,28 +552,28 @@ public class ServiceIndexController(ApiOptions apiOptions) : ControllerBase
                 {
                     Id = $"{baseUrl}/v3/search",
                     Type = "SearchQueryService",
-                    Comment = "查询包服务"
+                    Comment = localization.GetString("SearchQueryService")
                 },
 
                 new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}",
                     Type = "PackageIndexService",
-                    Comment = "包索引服务"
+                    Comment = localization.GetString("PackageIndexService")
                 },
 
                 new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package/{{id}}/{{version}}/download",
                     Type = "PackageDownloadService",
-                    Comment = "包下载服务"
+                    Comment = localization.GetString("PackageDownloadService")
                 },
 
                 new ServiceResource
                 {
                     Id = $"{baseUrl}/v3/package",
                     Type = "PackagePublishService",
-                    Comment = "包发布服务"
+                    Comment = localization.GetString("PackagePublishService")
                 }
             ]
         };

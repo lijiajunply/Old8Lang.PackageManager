@@ -40,6 +40,9 @@
             </svg>
           </button>
 
+          <!-- 语言切换 -->
+          <LanguageSwitcher />
+
           <!-- 主题切换 -->
           <button
             @click="toggleTheme"
@@ -77,7 +80,7 @@
 
           <!-- 登录按钮 -->
           <n-button v-else type="primary" @click="$router.push('/login')">
-            登录
+            {{ t('nav.login') }}
           </n-button>
 
           <!-- 移动端菜单按钮 -->
@@ -111,10 +114,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { useMessage, useDialog } from 'naive-ui'
+import LanguageSwitcher from './LanguageSwitcher.vue'
 
 defineEmits<{
   openSearch: []
@@ -125,29 +130,30 @@ const router = useRouter()
 const userStore = useUserStore()
 const message = useMessage()
 const dialog = useDialog()
+const { t } = useI18n()
 
 const mobileMenuOpen = ref(false)
 const isDark = ref(false)
 
 // 导航菜单
-const navigation = ref([
-  { name: '首页', to: '/' },
-  { name: '搜索', to: '/search' },
-  { name: '上传', to: '/upload' },
-  { name: '文档', to: '/docs' }
+const navigation = computed(() => [
+  { name: t('nav.home'), to: '/' },
+  { name: t('nav.packages'), to: '/search' },
+  { name: t('nav.upload'), to: '/upload' },
+  { name: t('nav.documentation'), to: '/docs' }
 ])
 
 // 用户下拉菜单选项
 const userMenuOptions = computed(() => [
   {
-    label: '个人中心',
+    label: t('nav.profile'),
     key: 'profile',
     icon: () => h('svg', { class: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' })
     ])
   },
   {
-    label: '我的包',
+    label: t('profile.myPackages'),
     key: 'packages',
     icon: () => h('svg', { class: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' })
@@ -155,7 +161,7 @@ const userMenuOptions = computed(() => [
   },
   { type: 'divider' },
   {
-    label: '设置',
+    label: t('common.edit'),
     key: 'settings',
     icon: () => h('svg', { class: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' })
@@ -163,7 +169,7 @@ const userMenuOptions = computed(() => [
   },
   { type: 'divider' },
   {
-    label: '退出登录',
+    label: t('nav.logout'),
     key: 'logout',
     icon: () => h('svg', { class: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1' })
@@ -205,14 +211,14 @@ const handleMenuSelect = (key: string) => {
       break
     case 'settings':
       // TODO: 实现设置页面
-      message.info('设置功能正在开发中')
+      message.info(t('common.info'))
       break
     case 'logout':
       dialog.warning({
-        title: '确认退出',
-        content: '您确定要退出登录吗？',
-        positiveText: '确定',
-        negativeText: '取消',
+        title: t('nav.logout'),
+        content: t('messages.deleteConfirm'),
+        positiveText: t('common.confirm'),
+        negativeText: t('common.cancel'),
         onPositiveClick: async () => {
           await userStore.logout()
         }
