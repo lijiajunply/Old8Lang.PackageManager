@@ -153,8 +153,8 @@
           <div v-if="packageStore.currentPackage.dependencies.length > 0" class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">依赖关系</h3>
             <div class="space-y-3">
-              <div 
-                v-for="dep in packageStore.currentPackage.dependencies" 
+              <div
+                v-for="dep in packageStore.currentPackage.dependencies"
                 :key="`${dep.id}-${dep.version}`"
                 class="flex items-center justify-between p-3 border border-gray-200 rounded-md"
               >
@@ -171,6 +171,22 @@
               </div>
             </div>
           </div>
+
+          <!-- 依赖树 -->
+          <DependencyTree
+            v-if="packageStore.currentPackage"
+            :package-id="packageStore.currentPackage.id"
+            :version="packageStore.currentPackage.version"
+            :max-depth="10"
+          />
+
+          <!-- 依赖图谱 -->
+          <DependencyGraph
+            v-if="packageStore.currentPackage"
+            :package-id="packageStore.currentPackage.id"
+            :version="packageStore.currentPackage.version"
+            :max-depth="10"
+          />
 
           <!-- 支持的框架 -->
           <div v-if="packageStore.currentPackage.frameworks" class="bg-white rounded-lg shadow-sm p-6">
@@ -267,6 +283,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePackageStore } from '@/stores/package'
 import PackageQualityDetails from '@/components/PackageQualityDetails.vue'
+import DependencyTree from '@/components/DependencyTree.vue'
+import DependencyGraph from '@/components/DependencyGraph.vue'
 import type { Package } from '@/types/package'
 
 const route = useRoute()

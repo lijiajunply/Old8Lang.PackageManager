@@ -74,6 +74,7 @@ builder.Services.AddScoped<IPackageIntegrityService, PackageIntegrityService>();
 builder.Services.AddScoped<ICertificateStore, FileSystemCertificateStore>();
 builder.Services.AddScoped<ICertificateManagementService, CertificateManagementService>();
 builder.Services.AddScoped<IPackageQualityService, PackageQualityService>();
+builder.Services.AddScoped<IPackageDependencyService, PackageDependencyService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<OidcAuthenticationService>();
 

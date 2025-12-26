@@ -174,3 +174,79 @@ public class PackageQualityScore
     public double DocumentationScore { get; set; }
     public DateTime LastCalculatedAt { get; set; }
 }
+
+/// <summary>
+/// 依赖树节点
+/// </summary>
+[Serializable]
+public class DependencyTreeNode
+{
+    public string PackageId { get; set; } = string.Empty;
+    public string Version { get; set; } = string.Empty;
+    public string Language { get; set; } = string.Empty;
+    public string VersionRange { get; set; } = string.Empty;
+    public bool IsResolved { get; set; }
+    public bool IsCircular { get; set; }
+    public bool IsDevelopmentDependency { get; set; }
+    public int Depth { get; set; }
+    public List<DependencyTreeNode> Dependencies { get; set; } = new();
+}
+
+/// <summary>
+/// 依赖树响应
+/// </summary>
+[Serializable]
+public class DependencyTreeResponse
+{
+    public string PackageId { get; set; } = string.Empty;
+    public string Version { get; set; } = string.Empty;
+    public string Language { get; set; } = string.Empty;
+    public int TotalDependencies { get; set; }
+    public int MaxDepth { get; set; }
+    public bool HasCircularDependencies { get; set; }
+    public List<string> CircularPaths { get; set; } = new();
+    public DependencyTreeNode RootNode { get; set; } = null!;
+}
+
+/// <summary>
+/// 依赖图节点（用于可视化）
+/// </summary>
+[Serializable]
+public class DependencyGraphNode
+{
+    public string Id { get; set; } = string.Empty;
+    public string PackageId { get; set; } = string.Empty;
+    public string Version { get; set; } = string.Empty;
+    public string Language { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public int Level { get; set; }
+    public bool IsRoot { get; set; }
+    public bool IsCircular { get; set; }
+    public bool IsDevelopmentDependency { get; set; }
+}
+
+/// <summary>
+/// 依赖图边
+/// </summary>
+[Serializable]
+public class DependencyGraphEdge
+{
+    public string From { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+    public string VersionRange { get; set; } = string.Empty;
+    public bool IsDevelopmentDependency { get; set; }
+}
+
+/// <summary>
+/// 依赖图响应
+/// </summary>
+[Serializable]
+public class DependencyGraphResponse
+{
+    public List<DependencyGraphNode> Nodes { get; set; } = new();
+    public List<DependencyGraphEdge> Edges { get; set; } = new();
+    public int TotalNodes { get; set; }
+    public int TotalEdges { get; set; }
+    public bool HasCircularDependencies { get; set; }
+    public List<string> CircularPaths { get; set; } = new();
+}

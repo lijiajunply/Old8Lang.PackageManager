@@ -17,6 +17,7 @@ public class PackagesController(
     IPackageSearchService searchService,
     IPackageManagementService packageService,
     IPackageQualityService qualityService,
+    IPackageDependencyService dependencyService,
     IApiKeyService apiKeyService,
     ApiOptions apiOptions,
     ILogger<PackagesController> logger)
@@ -428,6 +429,101 @@ public class PackagesController(
         {
             logger.LogError(ex, "重新计算所有包质量评分失败");
             return StatusCode(500, ApiResponse<object>.ErrorResult("重新计算所有包质量评分失败"));
+        }
+    }
+
+    /// <summary>
+    /// 获取包的依赖树
+    /// </summary>
+    /// <param name="id">包 ID</param>
+    /// <param name="version">版本号</param>
+    /// <param name="maxDepth">最大深度（默认10）</param>
+    [HttpGet("package/{id}/{version}/dependencies/tree")]
+    public async Task<ActionResult<ApiResponse<DependencyTreeResponse>>> GetDependencyTree(
+        string id,
+        string version,
+        [FromQuery] int maxDepth = 10)
+    {
+        try
+        {
+            if (maxDepth < 1 || maxDepth > 50)
+            {
+                return BadRequest(ApiResponse<DependencyTreeResponse>.ErrorResult("最大深度必须在 1 到 50 之间", "INVALID_MAX_DEPTH"));
+            }
+
+            var tree = await dependencyService.GetDependencyTreeAsync(id, version, maxDepth);
+            return Ok(ApiResponse<DependencyTreeResponse>.SuccessResult(tree));
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "获取依赖树失败: 包不存在 {PackageId} {Version}", id, version);
+            return NotFound(ApiResponse<DependencyTreeResponse>.ErrorResult(ex.Message, "PACKAGE_NOT_FOUND"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取依赖树失败: {PackageId} {Version}", id, version);
+            return StatusCode(500, ApiResponse<DependencyTreeResponse>.ErrorResult("获取依赖树失败"));
+        }
+    }
+
+    /// <summary>
+    /// 获取包的依赖图（用于可视化）
+    /// </summary>
+    /// <param name="id">包 ID</param>
+    /// <param name="version">版本号</param>
+    /// <param name="maxDepth">最大深度（默认10）</param>
+    [HttpGet("package/{id}/{version}/dependencies/graph")]
+    public async Task<ActionResult<ApiResponse<DependencyGraphResponse>>> GetDependencyGraph(
+        string id,
+        string version,
+        [FromQuery] int maxDepth = 10)
+    {
+        try
+        {
+            if (maxDepth < 1 || maxDepth > 50)
+            {
+                return BadRequest(ApiResponse<DependencyGraphResponse>.ErrorResult("最大深度必须在 1 到 50 之间", "INVALID_MAX_DEPTH"));
+            }
+
+            var graph = await dependencyService.GetDependencyGraphAsync(id, version, maxDepth);
+            return Ok(ApiResponse<DependencyGraphResponse>.SuccessResult(graph));
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "获取依赖图失败: 包不存在 {PackageId} {Version}", id, version);
+            return NotFound(ApiResponse<DependencyGraphResponse>.ErrorResult(ex.Message, "PACKAGE_NOT_FOUND"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取依赖图失败: {PackageId} {Version}", id, version);
+            return StatusCode(500, ApiResponse<DependencyGraphResponse>.ErrorResult("获取依赖图失败"));
+        }
+    }
+
+    /// <summary>
+    /// 检测包的循环依赖
+    /// </summary>
+    /// <param name="id">包 ID</param>
+    /// <param name="version">版本号</param>
+    [HttpGet("package/{id}/{version}/dependencies/circular")]
+    public async Task<ActionResult<ApiResponse<List<string>>>> DetectCircularDependencies(
+        string id,
+        string version)
+    {
+        try
+        {
+            var circularPaths = await dependencyService.DetectCircularDependenciesAsync(id, version);
+            return Ok(ApiResponse<List<string>>.SuccessResult(circularPaths));
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "检测循环依赖失败: 包不存在 {PackageId} {Version}", id, version);
+            return NotFound(ApiResponse<List<string>>.ErrorResult(ex.Message, "PACKAGE_NOT_FOUND"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "检测循环依赖失败: {PackageId} {Version}", id, version);
+            return StatusCode(500, ApiResponse<List<string>>.ErrorResult("检测循环依赖失败"));
         }
     }
 }

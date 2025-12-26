@@ -93,3 +93,54 @@ export interface PackageQualityScore {
   documentationScore: number
   lastCalculatedAt: string
 }
+
+export interface DependencyTreeNode {
+  packageId: string
+  version: string
+  language: string
+  versionRange: string
+  isResolved: boolean
+  isCircular: boolean
+  isDevelopmentDependency: boolean
+  depth: number
+  dependencies: DependencyTreeNode[]
+}
+
+export interface DependencyTreeResponse {
+  packageId: string
+  version: string
+  language: string
+  totalDependencies: number
+  maxDepth: number
+  hasCircularDependencies: boolean
+  circularPaths: string[]
+  rootNode: DependencyTreeNode
+}
+
+export interface DependencyGraphNode {
+  id: string
+  packageId: string
+  version: string
+  language: string
+  label: string
+  level: number
+  isRoot: boolean
+  isCircular: boolean
+  isDevelopmentDependency: boolean
+}
+
+export interface DependencyGraphEdge {
+  from: string
+  to: string
+  versionRange: string
+  isDevelopmentDependency: boolean
+}
+
+export interface DependencyGraphResponse {
+  nodes: DependencyGraphNode[]
+  edges: DependencyGraphEdge[]
+  totalNodes: number
+  totalEdges: number
+  hasCircularDependencies: boolean
+  circularPaths: string[]
+}
