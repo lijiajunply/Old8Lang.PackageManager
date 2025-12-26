@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Old8Lang.PackageManager.Server.Configuration;
 using Old8Lang.PackageManager.Server.Data;
 using Old8Lang.PackageManager.Server.Services;
+using Old8Lang.PackageManager.Server.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +57,12 @@ builder.Services.AddAuthentication(options =>
 // 延迟配置认证，在所有服务注册后
 builder.Services.AddSingleton<IStartupFilter>(new AuthenticationStartupFilter());
 
+// 添加存储服务（支持多种存储后端）
+builder.Services.AddStorageServices(builder.Configuration);
+
 // 添加服务
+// 注意：可以选择使用 AbstractPackageStorageService 替代 PackageStorageService
+// builder.Services.AddScoped<IPackageStorageService, Storage.AbstractPackageStorageService>();
 builder.Services.AddScoped<IPackageStorageService, PackageStorageService>();
 builder.Services.AddScoped<IPackageManagementService, PackageManagementService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();

@@ -114,6 +114,12 @@ public class SignatureVerificationResult
     /// </summary>
     public List<string> Errors { get; init; } = [];
 
+    /// <summary>
+    /// 验证成功
+    /// </summary>
+    /// <param name="signature"></param>
+    /// <param name="isTrusted"></param>
+    /// <returns></returns>
     public static SignatureVerificationResult Success(PackageSignature signature, bool isTrusted = true)
     {
         return new SignatureVerificationResult
@@ -125,6 +131,12 @@ public class SignatureVerificationResult
         };
     }
 
+    /// <summary>
+    /// 验证失败
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="errors"></param>
+    /// <returns></returns>
     public static SignatureVerificationResult Failure(string message, params string[] errors)
     {
         return new SignatureVerificationResult
@@ -181,6 +193,12 @@ public class CertificateInfo
     /// </summary>
     public required string PublicKey { get; init; }
 
+    /// <summary>
+    /// 从 X509Certificate2 创建证书信息
+    /// </summary>
+    /// <param name="cert"></param>
+    /// <param name="isTrusted"></param>
+    /// <returns></returns>
     public static CertificateInfo FromX509Certificate(X509Certificate2 cert, bool isTrusted = false)
     {
         return new CertificateInfo
