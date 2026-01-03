@@ -2,6 +2,8 @@ using Old8Lang.PackageManager.Core.Interfaces;
 using Old8Lang.PackageManager.Core.Models;
 using Old8Lang.PackageManager.Core.Exceptions;
 using Old8Lang.PackageManager.Core.Logging;
+using Old8Lang.PackageManager.Core.Resilience;
+using Polly;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
@@ -17,6 +19,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
     private readonly string _baseUrl;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<RemotePackageSource> _logger;
+    private readonly ResiliencePipeline _httpRetryPipeline;
+    private readonly ResiliencePipeline _downloadPipeline;
 
     /// <summary>
     /// 包源名称
@@ -41,17 +45,23 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <param name="apiKey">可选的API密钥</param>
     /// <param name="timeout">请求超时时间（秒）</param>
     /// <param name="logger">日志记录器（可选）</param>
+    /// <param name="retryOptions">重试选项（可选）</param>
     public RemotePackageSource(
         string name,
         string source,
         string? apiKey = null,
         int timeout = 30,
-        ILogger<RemotePackageSource>? logger = null)
+        ILogger<RemotePackageSource>? logger = null,
+        ResiliencePolicies.HttpRetryOptions? retryOptions = null)
     {
         Name = name;
         Source = source.TrimEnd('/');
         _baseUrl = Source;
         _logger = logger ?? NullLogger<RemotePackageSource>.Instance;
+
+        // 初始化弹性策略
+        _httpRetryPipeline = ResiliencePolicies.CreateHttpRetryPipeline(retryOptions, _logger);
+        _downloadPipeline = ResiliencePolicies.CreateDownloadPipeline(_logger);
 
         _httpClient = new HttpClient
         {
@@ -87,7 +97,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
         try
         {
             var url = $"{_baseUrl}/v3/search?q={Uri.EscapeDataString(searchTerm)}&prerelease={includePrerelease}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpRetryPipeline.ExecuteAsync(async ct =>
+                await _httpClient.GetAsync(url, ct));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -158,7 +169,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
         try
         {
             var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpRetryPipeline.ExecuteAsync(async ct =>
+                await _httpClient.GetAsync(url, ct));
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -243,7 +255,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
         try
         {
             var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}/{Uri.EscapeDataString(version)}/download";
-            var response = await _httpClient.GetAsync(url);
+            var response = await _downloadPipeline.ExecuteAsync(async ct =>
+                await _httpClient.GetAsync(url, ct));
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -316,7 +329,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
         try
         {
             var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}?version={Uri.EscapeDataString(version)}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpRetryPipeline.ExecuteAsync(async ct =>
+                await _httpClient.GetAsync(url, ct));
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -384,7 +398,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
         try
         {
             _logger.LogDebug("Testing connection to source '{SourceName}' at '{BaseUrl}'", Name, _baseUrl);
-            var response = await _httpClient.GetAsync($"{_baseUrl}/v3/index.json");
+            var response = await _httpRetryPipeline.ExecuteAsync(async ct =>
+                await _httpClient.GetAsync($"{_baseUrl}/v3/index.json", ct));
             var success = response.IsSuccessStatusCode;
 
             if (success)

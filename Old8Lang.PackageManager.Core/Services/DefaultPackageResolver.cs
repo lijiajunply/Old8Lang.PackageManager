@@ -97,30 +97,40 @@ public class DefaultPackageResolver : IPackageResolver
         var packageSources = sources as IPackageSource[] ?? sources.ToArray();
         var sourceErrors = new List<string>();
 
-        foreach (var source in packageSources)
+        // 并发查询所有源的包元数据
+        var metadataTasks = packageSources.Select(async source =>
         {
             try
             {
-                package = await source.GetPackageMetadataAsync(packageId, version);
-                if (package != null)
+                var pkg = await source.GetPackageMetadataAsync(packageId, version);
+                if (pkg != null)
                 {
                     _logger.LogDebug("Found package '{PackageId}' version '{Version}' in source '{SourceName}'",
                         packageId, version, source.Name);
-                    break;
                 }
+                return (Source: source.Name, Package: pkg, Error: (string?)null);
             }
             catch (PackageSourceException ex)
             {
-                sourceErrors.Add($"{source.Name}: {ex.Message}");
                 _logger.LogWarning(ex, "Failed to get package metadata from source '{SourceName}'", source.Name);
+                return (Source: source.Name, Package: (Package?)null, Error: $"{source.Name}: {ex.Message}");
             }
             catch (Exception ex)
             {
-                sourceErrors.Add($"{source.Name}: {ex.Message}");
                 _logger.LogError(ex, "Unexpected error getting package metadata from source '{SourceName}'",
                     source.Name);
+                return (Source: source.Name, Package: (Package?)null, Error: $"{source.Name}: {ex.Message}");
             }
-        }
+        });
+
+        var metadataResults = await Task.WhenAll(metadataTasks);
+
+        // 获取第一个成功的结果
+        var successfulResult = metadataResults.FirstOrDefault(r => r.Package != null);
+        package = successfulResult.Package;
+
+        // 收集所有错误
+        sourceErrors.AddRange(metadataResults.Where(r => r.Error != null).Select(r => r.Error!));
 
         if (package == null)
         {
@@ -191,7 +201,10 @@ public class DefaultPackageResolver : IPackageResolver
         _logger.LogDebug("Resolving version range '{VersionRange}' for package '{PackageId}'",
             versionRange, packageId);
 
-        foreach (var source in sources)
+        var sourceList = sources.ToList();
+
+        // 并发查询所有源
+        var tasks = sourceList.Select(async source =>
         {
             try
             {
@@ -202,7 +215,7 @@ public class DefaultPackageResolver : IPackageResolver
                 {
                     _logger.LogDebug("No versions found for package '{PackageId}' in source '{SourceName}'",
                         packageId, source.Name);
-                    continue;
+                    return (Source: source.Name, Version: (string?)null);
                 }
 
                 var concreteVersion = versionList.FirstOrDefault(v => IsVersionCompatible(versionRange, v));
@@ -211,24 +224,36 @@ public class DefaultPackageResolver : IPackageResolver
                 {
                     _logger.LogDebug("Resolved version '{Version}' for package '{PackageId}' from source '{SourceName}'",
                         concreteVersion, packageId, source.Name);
-                    return concreteVersion;
                 }
+
+                return (Source: source.Name, Version: concreteVersion);
             }
             catch (PackageSourceException ex)
             {
                 _logger.LogWarning(ex, "Failed to get versions for package '{PackageId}' from source '{SourceName}'",
                     packageId, source.Name);
+                return (Source: source.Name, Version: (string?)null);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error getting versions for package '{PackageId}' from source '{SourceName}'",
                     packageId, source.Name);
+                return (Source: source.Name, Version: (string?)null);
             }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
+        // 返回第一个成功解析的版本
+        var resolvedVersion = results.FirstOrDefault(r => r.Version != null).Version;
+
+        if (resolvedVersion == null)
+        {
+            _logger.LogWarning("Could not resolve version range '{VersionRange}' for package '{PackageId}' from any source",
+                versionRange, packageId);
         }
 
-        _logger.LogWarning("Could not resolve version range '{VersionRange}' for package '{PackageId}' from any source",
-            versionRange, packageId);
-        return null;
+        return resolvedVersion;
     }
 
     /// <summary>
