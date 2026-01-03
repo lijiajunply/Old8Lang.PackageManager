@@ -9,7 +9,7 @@
 
     <!-- NuGet 包配置 -->
     <PackageId>Old8Lang.PackageManager.Core</PackageId>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <Authors>Old8Lang Team</Authors>
     <Company>Old8Lang</Company>
     <Product>Old8Lang Package Manager Core</Product>
@@ -37,7 +37,7 @@
     <PackageTags>package-manager;dependency-resolver;version-control;old8lang;scripting;package-management;nuget;dependency-management;package-resolution;language-agnostic</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>v1.1.1
+    <PackageReleaseNotes>v1.1.2
 - 完整的包解析功能
 - 依赖关系智能解析
 - 多包源管理
