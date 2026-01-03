@@ -68,5 +68,11 @@ mono_crash.*
 appsettings.Development.json
 appsettings.Local.json
 
+# Environment files (contains sensitive data)
+# Note: .env.example and .env.docker are template files and should be committed
+.env
+.env.local
+.env.*.local
+
 # Package cache
 o8packages.json.backup

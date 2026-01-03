@@ -1,6 +1,5 @@
 using Polly;
 using Polly.Retry;
-using Polly.Timeout;
 using Microsoft.Extensions.Logging;
 using Old8Lang.PackageManager.Core.Exceptions;
 

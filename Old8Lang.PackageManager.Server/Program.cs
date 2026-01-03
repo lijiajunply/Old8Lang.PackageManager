@@ -6,8 +6,19 @@ using Old8Lang.PackageManager.Server.Services;
 using Old8Lang.PackageManager.Server.Extensions;
 using Old8Lang.PackageManager.Server.Middleware;
 using System.Globalization;
+using DotNetEnv;
+
+// Load .env file if it exists (development mode)
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+    Console.WriteLine($@"Loaded environment variables from {envPath}");
+}
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddEnvironmentVariables();
 
 // 配置选项
 builder.Services.Configure<PackageStorageOptions>(builder.Configuration.GetSection("PackageStorage"));
