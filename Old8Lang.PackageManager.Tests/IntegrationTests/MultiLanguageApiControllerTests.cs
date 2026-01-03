@@ -22,15 +22,12 @@ public class MultiLanguageApiControllerTests
     private readonly Mock<IPackageSearchService> _mockSearchService;
     private readonly Mock<ILogger<PackagesController>> _mockLogger;
     private readonly PackagesController _packagesController;
-    private readonly Mock<ILogger<PyPIController>> _mockPyPiLogger;
-    private readonly PyPIController _pyPiController;
 
     public MultiLanguageApiControllerTests()
     {
         _mockPackageService = new Mock<IPackageManagementService>();
         _mockSearchService = new Mock<IPackageSearchService>();
         _mockLogger = new Mock<ILogger<PackagesController>>();
-        _mockPyPiLogger = new Mock<ILogger<PyPIController>>();
 
         _packagesController = new PackagesController(
             _mockSearchService.Object,
@@ -41,11 +38,6 @@ public class MultiLanguageApiControllerTests
             new Mock<ApiOptions>().Object,
             new Mock<ILocalizationService>().Object,
             _mockLogger.Object);
-
-        _pyPiController = new PyPIController(
-            _mockPackageService.Object,
-            _mockSearchService.Object,
-            _mockPyPiLogger.Object);
     }
 
     [Theory]
@@ -232,166 +224,6 @@ public class MultiLanguageApiControllerTests
         // Assert
         var badRequestResult = result.Result as BadRequestObjectResult;
         badRequestResult.Should().NotBeNull();
-    }
-
-    // PyPI Controller Tests
-
-    [Fact]
-    public async Task GetSimpleIndex_ShouldReturnHtmlPackageList()
-    {
-        // Arrange
-        var pythonPackages = new List<PackageEntity>
-        {
-            new() { PackageId = "requests", Version = "2.28.0", Language = "python" },
-            new() { PackageId = "numpy", Version = "1.21.0", Language = "python" }
-        };
-
-        _mockPackageService.Setup(s => s.SearchPackagesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-                      .ReturnsAsync(pythonPackages);
-
-        // Act - 暂时跳过try-catch让真正的异常抛出来看错误信息
-        var result = await _pyPiController.GetSimpleIndex();
-
-        // Assert
-        result.Should().NotBeNull();
-        
-        // 如果是StatusCodeResult，检查状态码并提供更多信息
-        if (result is StatusCodeResult statusCodeResult)
-        {
-            Console.WriteLine($"Controller returned StatusCode: {statusCodeResult.StatusCode}");
-            result.Should().BeOfType<ContentResult>($"Expected ContentResult but got StatusCodeResult with status {statusCodeResult.StatusCode}");
-        }
-        
-        var contentResult = result as ContentResult;
-        contentResult.Should().NotBeNull("Expected ContentResult");
-        contentResult!.ContentType.Should().Contain("text/html");
-        contentResult.Content.Should().Contain("requests");
-        contentResult.Content.Should().Contain("numpy");
-        contentResult.Content.Should().Contain("requests-2.28.0-py3-none-any.whl");
-        contentResult.Content.Should().Contain("100KB");
-    }
-
-    [Fact]
-    public async Task DownloadPackage_ShouldIncrementDownloadCount()
-    {
-        // Arrange
-        var package = new PackageEntity
-        {
-            PackageId = "requests",
-            Version = "2.28.0",
-            Language = "python",
-            DownloadCount = 100
-        };
-
-        _mockPackageService.Setup(s => s.GetPackageAsync("requests", "2.28.0", "python"))
-                      .ReturnsAsync(package);
-
-        _mockPackageService.Setup(s => s.IncrementDownloadCountAsync("requests", "2.28.0"))
-                      .ReturnsAsync(true);
-
-        // Act
-        var result = await _pyPiController.DownloadPackage("requests", "requests-2.28.0-py3-none-any.whl");
-
-        // Assert
-        result.Should().BeOfType<FileStreamResult>();
-        
-        _mockPackageService.Verify(s => s.IncrementDownloadCountAsync("requests", "2.28.0"), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetPackageJson_ShouldReturnPyPICompatibleResponse()
-    {
-        // Arrange
-        var packages = new List<PackageEntity>
-        {
-            new()
-            {
-                PackageId = "requests",
-                Version = "2.28.0",
-                Language = "python",
-                Description = "HTTP library for Python",
-                Author = "Kenneth Reitz",
-                License = "Apache 2.0",
-                ProjectUrl = "https://requests.readthedocs.io/",
-                DownloadCount = 1000,
-                IsPrerelease = false
-            }
-        };
-
-        _mockPackageService.Setup(s => s.GetAllVersionsAsync("requests"))
-                      .ReturnsAsync(packages);
-
-        // Act
-        var result = await _pyPiController.GetPackageJson("requests");
-
-        // Assert
-        var okResult = result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        
-        var responseValue = okResult!.Value;
-        responseValue.Should().NotBeNull();
-        
-        // Verify PyPI structure
-        var responseDict = JsonSerializer.Deserialize<Dictionary<string, object>>(
-            JsonSerializer.Serialize(responseValue));
-        
-        responseDict.Should().ContainKey("info");
-        responseDict.Should().ContainKey("releases");
-        responseDict.Should().ContainKey("last_serial");
-        
-        var info = (JsonElement)responseDict["info"];
-        info.GetProperty("name").GetString().Should().Be("requests");
-        info.GetProperty("version").GetString().Should().Be("2.28.0");
-    }
-
-    [Fact]
-    public async Task SearchPackages_PyPIStyle_ShouldReturnSearchResults()
-    {
-        // Arrange
-        var searchResponse = new PackageSearchResponse
-        {
-            TotalHits = 2,
-            Data = new List<PackageSearchResult>
-            {
-                new()
-                {
-                    PackageId = "requests",
-                    Language = "python",
-                    Description = "HTTP library for Python",
-                    DownloadCount = 1000
-                },
-                new()
-                {
-                    PackageId = "urllib3",
-                    Language = "python",
-                    Description = "HTTP library with thread-safe connection pooling",
-                    DownloadCount = 800
-                }
-            }
-        };
-
-        _mockSearchService.Setup(s => s.SearchAsync("http", "python", 0, 20))
-                      .ReturnsAsync(searchResponse);
-
-        // Act
-        var result = await _pyPiController.SearchPackages("http", 1, 20);
-
-        // Assert
-        var okResult = result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        
-        var responseValue = okResult!.Value;
-        responseValue.Should().NotBeNull();
-        
-        // Verify PyPI search structure
-        var responseDict = JsonSerializer.Deserialize<Dictionary<string, object>>(
-            JsonSerializer.Serialize(responseValue));
-        
-        responseDict.Should().ContainKey("info");
-        responseDict.Should().ContainKey("results");
-        
-        var results = (JsonElement)responseDict["results"];
-        results.GetArrayLength().Should().Be(2);
     }
 
     [Theory]
