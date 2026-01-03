@@ -1,5 +1,9 @@
 using Old8Lang.PackageManager.Core.Interfaces;
 using Old8Lang.PackageManager.Core.Models;
+using Old8Lang.PackageManager.Core.Exceptions;
+using Old8Lang.PackageManager.Core.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 
 namespace Old8Lang.PackageManager.Core.Services;
@@ -12,6 +16,7 @@ public class RemotePackageSource : IPackageSource, IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly ILogger<RemotePackageSource> _logger;
 
     /// <summary>
     /// 包源名称
@@ -35,11 +40,18 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <param name="source">远程服务器地址</param>
     /// <param name="apiKey">可选的API密钥</param>
     /// <param name="timeout">请求超时时间（秒）</param>
-    public RemotePackageSource(string name, string source, string? apiKey = null, int timeout = 30)
+    /// <param name="logger">日志记录器（可选）</param>
+    public RemotePackageSource(
+        string name,
+        string source,
+        string? apiKey = null,
+        int timeout = 30,
+        ILogger<RemotePackageSource>? logger = null)
     {
         Name = name;
         Source = source.TrimEnd('/');
         _baseUrl = Source;
+        _logger = logger ?? NullLogger<RemotePackageSource>.Instance;
 
         _httpClient = new HttpClient
         {
@@ -70,6 +82,8 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <returns>匹配的包列表</returns>
     public async Task<IEnumerable<Package>> SearchPackagesAsync(string searchTerm, bool includePrerelease = false)
     {
+        _logger.SearchingPackages(Name, searchTerm);
+
         try
         {
             var url = $"{_baseUrl}/v3/search?q={Uri.EscapeDataString(searchTerm)}&prerelease={includePrerelease}";
@@ -77,6 +91,11 @@ public class RemotePackageSource : IPackageSource, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
+                var statusCode = (int)response.StatusCode;
+                _logger.HttpRequestFailed(Name, url, statusCode,
+                    new PackageSourceNetworkException(
+                        $"Search request failed with status code {statusCode}",
+                        statusCode, Name, _baseUrl));
                 return [];
             }
 
@@ -85,15 +104,43 @@ public class RemotePackageSource : IPackageSource, IDisposable
 
             if (searchResponse?.Data == null)
             {
+                _logger.LogWarning("Search response is null or has no data for term '{SearchTerm}' in source '{SourceName}'",
+                    searchTerm, Name);
                 return [];
             }
 
-            return searchResponse.Data.Select(ToPackage).Where(p => p != null).Cast<Package>();
+            var packages = searchResponse.Data.Select(ToPackage).Where(p => p != null).Cast<Package>().ToList();
+            _logger.SearchCompleted(Name, packages.Count);
+            return packages;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Console.WriteLine($"Error searching packages from remote source: {ex.Message}");
-            return [];
+            _logger.NetworkError(Name, ex);
+            throw new PackageSourceNetworkException(
+                $"Network error occurred while searching packages in source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Search request timed out for term '{SearchTerm}' in source '{SourceName}'",
+                searchTerm, Name);
+            throw new PackageSourceNetworkException(
+                $"Search request timed out in source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse search response for term '{SearchTerm}' in source '{SourceName}'",
+                searchTerm, Name);
+            throw new PackageParseException(
+                $"Failed to parse search response from source '{Name}'", ex);
+        }
+        catch (Exception ex) when (ex is not PackageManagerException)
+        {
+            _logger.SearchFailed(Name, searchTerm, ex);
+            throw new PackageSourceException(
+                $"Unexpected error occurred while searching packages in source '{Name}'",
+                ex, Name, _baseUrl);
         }
     }
 
@@ -105,13 +152,28 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <returns>版本列表</returns>
     public async Task<IEnumerable<string>> GetPackageVersionsAsync(string packageId, bool includePrerelease = false)
     {
+        _logger.LogInformation("Fetching versions for package '{PackageId}' from source '{SourceName}'",
+            packageId, Name);
+
         try
         {
             var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}";
             var response = await _httpClient.GetAsync(url);
 
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Package '{PackageId}' not found in source '{SourceName}'",
+                    packageId, Name);
+                return [];
+            }
+
             if (!response.IsSuccessStatusCode)
             {
+                var statusCode = (int)response.StatusCode;
+                _logger.HttpRequestFailed(Name, url, statusCode,
+                    new PackageSourceNetworkException(
+                        $"Get versions request failed with status code {statusCode}",
+                        statusCode, Name, _baseUrl));
                 return [];
             }
 
@@ -120,19 +182,49 @@ public class RemotePackageSource : IPackageSource, IDisposable
 
             if (packageResponse?.Versions == null)
             {
+                _logger.LogWarning("Version response is null or has no versions for package '{PackageId}' in source '{SourceName}'",
+                    packageId, Name);
                 return [];
             }
 
             var versions = packageResponse.Versions
                 .Where(v => includePrerelease || !v.IsPrerelease)
-                .Select(v => v.Version);
+                .Select(v => v.Version)
+                .ToList();
 
+            _logger.LogInformation("Found {Count} versions for package '{PackageId}' in source '{SourceName}'",
+                versions.Count, packageId, Name);
             return versions;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Console.WriteLine($"Error getting package versions from remote source: {ex.Message}");
-            return [];
+            _logger.NetworkError(Name, ex);
+            throw new PackageSourceNetworkException(
+                $"Network error occurred while fetching versions for package '{packageId}' in source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Get versions request timed out for package '{PackageId}' in source '{SourceName}'",
+                packageId, Name);
+            throw new PackageSourceNetworkException(
+                $"Get versions request timed out for package '{packageId}' in source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse versions response for package '{PackageId}' in source '{SourceName}'",
+                packageId, Name);
+            throw new PackageParseException(
+                $"Failed to parse versions response for package '{packageId}' from source '{Name}'", ex);
+        }
+        catch (Exception ex) when (ex is not PackageManagerException)
+        {
+            _logger.LogError(ex, "Unexpected error while getting versions for package '{PackageId}' in source '{SourceName}'",
+                packageId, Name);
+            throw new PackageSourceException(
+                $"Unexpected error occurred while getting versions for package '{packageId}' in source '{Name}'",
+                ex, Name, _baseUrl);
         }
     }
 
@@ -142,37 +234,71 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <param name="packageId">包ID</param>
     /// <param name="version">包版本</param>
     /// <returns>包文件流</returns>
-    /// <exception cref="FileNotFoundException">包不存在时抛出</exception>
-    /// <exception cref="InvalidOperationException">下载失败时抛出</exception>
+    /// <exception cref="PackageNotFoundException">包不存在时抛出</exception>
+    /// <exception cref="PackageSourceNetworkException">网络请求失败时抛出</exception>
     public async Task<Stream> DownloadPackageAsync(string packageId, string version)
     {
+        _logger.DownloadingPackage(Name, packageId, version);
+
         try
         {
-            var url =
-                $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}/{Uri.EscapeDataString(version)}/download";
+            var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}/{Uri.EscapeDataString(version)}/download";
             var response = await _httpClient.GetAsync(url);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                throw new FileNotFoundException($"Package {packageId} version {version} not found in remote source.");
+                var notFoundEx = new PackageNotFoundException(packageId, version);
+                _logger.LogWarning(notFoundEx, "Package '{PackageId}' version '{Version}' not found in source '{SourceName}'",
+                    packageId, version, Name);
+                throw notFoundEx;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException(
-                    $"Failed to download package {packageId} version {version}. Status: {response.StatusCode}");
+                var statusCode = (int)response.StatusCode;
+                var networkEx = new PackageSourceNetworkException(
+                    $"Failed to download package '{packageId}' version '{version}' from source '{Name}'. Status: {response.StatusCode}",
+                    statusCode, Name, _baseUrl);
+                _logger.HttpRequestFailed(Name, url, statusCode, networkEx);
+                throw networkEx;
             }
 
-            return await response.Content.ReadAsStreamAsync();
+            var stream = await response.Content.ReadAsStreamAsync();
+            var contentLength = response.Content.Headers.ContentLength ?? 0;
+            _logger.DownloadCompleted(packageId, version, contentLength);
+
+            return stream;
         }
-        catch (FileNotFoundException)
+        catch (PackageNotFoundException)
         {
             throw;
         }
-        catch (Exception ex)
+        catch (PackageSourceNetworkException)
         {
-            throw new InvalidOperationException(
-                $"Failed to download package {packageId} version {version}: {ex.Message}", ex);
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.NetworkError(Name, ex);
+            throw new PackageSourceNetworkException(
+                $"Network error occurred while downloading package '{packageId}' version '{version}' from source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Download request timed out for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                packageId, version, Name);
+            throw new PackageSourceNetworkException(
+                $"Download request timed out for package '{packageId}' version '{version}' in source '{Name}'",
+                ex, null, Name, _baseUrl);
+        }
+        catch (Exception ex) when (ex is not PackageManagerException)
+        {
+            _logger.LogError(ex, "Unexpected error while downloading package '{PackageId}' version '{Version}' from source '{SourceName}'",
+                packageId, version, Name);
+            throw new PackageSourceException(
+                $"Failed to download package '{packageId}' version '{version}' from source '{Name}': {ex.Message}",
+                ex, Name, _baseUrl);
         }
     }
 
@@ -184,25 +310,67 @@ public class RemotePackageSource : IPackageSource, IDisposable
     /// <returns>包元数据</returns>
     public async Task<Package?> GetPackageMetadataAsync(string packageId, string version)
     {
+        _logger.LogDebug("Fetching metadata for package '{PackageId}' version '{Version}' from source '{SourceName}'",
+            packageId, version, Name);
+
         try
         {
-            var url =
-                $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}?version={Uri.EscapeDataString(version)}";
+            var url = $"{_baseUrl}/v3/package/{Uri.EscapeDataString(packageId)}?version={Uri.EscapeDataString(version)}";
             var response = await _httpClient.GetAsync(url);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("Package '{PackageId}' version '{Version}' not found in source '{SourceName}'",
+                    packageId, version, Name);
+                return null;
+            }
 
             if (!response.IsSuccessStatusCode)
             {
+                var statusCode = (int)response.StatusCode;
+                _logger.HttpRequestFailed(Name, url, statusCode,
+                    new PackageSourceNetworkException(
+                        $"Get metadata request failed with status code {statusCode}",
+                        statusCode, Name, _baseUrl));
                 return null;
             }
 
             var jsonContent = await response.Content.ReadAsStringAsync();
             var packageResponse = JsonSerializer.Deserialize<PackageDetailResponse>(jsonContent, _jsonOptions);
 
-            return packageResponse != null ? ToPackage(packageResponse) : null;
+            if (packageResponse == null)
+            {
+                _logger.LogWarning("Metadata response is null for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                    packageId, version, Name);
+                return null;
+            }
+
+            _logger.LogDebug("Successfully fetched metadata for package '{PackageId}' version '{Version}' from source '{SourceName}'",
+                packageId, version, Name);
+            return ToPackage(packageResponse);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Network error while fetching metadata for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                packageId, version, Name);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Get metadata request timed out for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                packageId, version, Name);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse metadata response for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                packageId, version, Name);
+            return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error getting package metadata from remote source: {ex.Message}");
+            _logger.LogError(ex, "Unexpected error while getting metadata for package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                packageId, version, Name);
             return null;
         }
     }
@@ -215,11 +383,35 @@ public class RemotePackageSource : IPackageSource, IDisposable
     {
         try
         {
+            _logger.LogDebug("Testing connection to source '{SourceName}' at '{BaseUrl}'", Name, _baseUrl);
             var response = await _httpClient.GetAsync($"{_baseUrl}/v3/index.json");
-            return response.IsSuccessStatusCode;
+            var success = response.IsSuccessStatusCode;
+
+            if (success)
+            {
+                _logger.LogInformation("Successfully connected to source '{SourceName}'", Name);
+            }
+            else
+            {
+                _logger.LogWarning("Connection test failed for source '{SourceName}', status code: {StatusCode}",
+                    Name, response.StatusCode);
+            }
+
+            return success;
         }
-        catch
+        catch (HttpRequestException ex)
         {
+            _logger.LogWarning(ex, "Network error during connection test for source '{SourceName}'", Name);
+            return false;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Connection test timed out for source '{SourceName}'", Name);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during connection test for source '{SourceName}'", Name);
             return false;
         }
     }

@@ -65,9 +65,10 @@
   </ItemGroup>
 
   <!-- 依赖项（如果有的话） -->
-  <ItemGroup>
-    <!-- 这里可以添加外部依赖 -->
+  <ItemGroup><!-- 这里可以添加外部依赖 -->
     <!-- <PackageReference Include="Newtonsoft.Json" Version="13.0.3" /> -->
+  
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
   </ItemGroup>
 
 </Project>

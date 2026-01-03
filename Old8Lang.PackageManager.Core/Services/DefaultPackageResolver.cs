@@ -1,5 +1,9 @@
 using Old8Lang.PackageManager.Core.Interfaces;
 using Old8Lang.PackageManager.Core.Models;
+using Old8Lang.PackageManager.Core.Exceptions;
+using Old8Lang.PackageManager.Core.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Old8Lang.PackageManager.Core.Services;
 
@@ -8,16 +12,29 @@ namespace Old8Lang.PackageManager.Core.Services;
 /// </summary>
 public class DefaultPackageResolver : IPackageResolver
 {
+    private readonly ILogger<DefaultPackageResolver> _logger;
+
+    /// <summary>
+    /// 默认包依赖解析器
+    /// </summary>
+    /// <param name="logger">日志记录器（可选）</param>
+    public DefaultPackageResolver(ILogger<DefaultPackageResolver>? logger = null)
+    {
+        _logger = logger ?? NullLogger<DefaultPackageResolver>.Instance;
+    }
+
     /// <summary>
     /// 解析依赖
     /// </summary>
-    /// <param name="packageId"></param>
-    /// <param name="version"></param>
-    /// <param name="sources"></param>
-    /// <returns></returns>
+    /// <param name="packageId">包ID</param>
+    /// <param name="version">包版本</param>
+    /// <param name="sources">包源列表</param>
+    /// <returns>解析结果</returns>
     public async Task<ResolveResult> ResolveDependenciesAsync(string packageId, string version,
         IEnumerable<IPackageSource> sources)
     {
+        _logger.ResolvingDependencies(packageId, version);
+
         var result = new ResolveResult();
         var resolvedPackages = new HashSet<string>();
         var visited = new HashSet<string>();
@@ -27,11 +44,29 @@ public class DefaultPackageResolver : IPackageResolver
             await ResolveDependenciesRecursive(packageId, version, sources, resolvedPackages, visited, result);
             result.Success = true;
             result.Message = "Dependencies resolved successfully.";
+
+            _logger.DependenciesResolved(packageId, result.ResolvedDependencies.Count);
+        }
+        catch (DependencyResolutionException ex)
+        {
+            result.Success = false;
+            result.Message = ex.Message;
+            _logger.LogError(ex, "Dependency resolution failed for package '{PackageId}' version '{Version}'",
+                packageId, version);
+        }
+        catch (PackageNotFoundException ex)
+        {
+            result.Success = false;
+            result.Message = $"Package not found: {ex.Message}";
+            _logger.LogError(ex, "Package '{PackageId}' version '{Version}' not found during dependency resolution",
+                ex.PackageId, ex.Version);
         }
         catch (Exception ex)
         {
             result.Success = false;
             result.Message = $"Dependency resolution failed: {ex.Message}";
+            _logger.LogError(ex, "Unexpected error during dependency resolution for package '{PackageId}' version '{Version}'",
+                packageId, version);
         }
 
         return result;
@@ -49,30 +84,58 @@ public class DefaultPackageResolver : IPackageResolver
 
         // 避免循环依赖
         if (!visited.Add(packageKey))
+        {
+            _logger.LogDebug("Circular dependency detected for package '{PackageKey}', skipping", packageKey);
             return;
+        }
+
+        _logger.LogDebug("Resolving dependencies for package '{PackageId}' version '{Version}'",
+            packageId, version);
 
         // 从源中获取包信息
         Package? package = null;
         var packageSources = sources as IPackageSource[] ?? sources.ToArray();
+        var sourceErrors = new List<string>();
+
         foreach (var source in packageSources)
         {
             try
             {
                 package = await source.GetPackageMetadataAsync(packageId, version);
-                if (package != null) break;
+                if (package != null)
+                {
+                    _logger.LogDebug("Found package '{PackageId}' version '{Version}' in source '{SourceName}'",
+                        packageId, version, source.Name);
+                    break;
+                }
+            }
+            catch (PackageSourceException ex)
+            {
+                sourceErrors.Add($"{source.Name}: {ex.Message}");
+                _logger.LogWarning(ex, "Failed to get package metadata from source '{SourceName}'", source.Name);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting package metadata from {source.Name}: {ex.Message}");
+                sourceErrors.Add($"{source.Name}: {ex.Message}");
+                _logger.LogError(ex, "Unexpected error getting package metadata from source '{SourceName}'",
+                    source.Name);
             }
         }
 
         if (package == null)
         {
-            throw new InvalidOperationException($"Package {packageId} version {version} not found in any source.");
+            var errorDetails = sourceErrors.Any()
+                ? $"Errors from sources: {string.Join(", ", sourceErrors)}"
+                : "No sources available or package not found in any source.";
+
+            throw new PackageNotFoundException(packageId, version,
+                new Exception($"Package {packageId} version {version} not found in any source. {errorDetails}"));
         }
 
         // 解析每个依赖
+        _logger.LogDebug("Package '{PackageId}' has {DependencyCount} dependencies",
+            packageId, package.Dependencies.Count);
+
         foreach (var dependency in package.Dependencies)
         {
             var depKey = $"{dependency.PackageId}@{dependency.VersionRange}";
@@ -82,18 +145,28 @@ public class DefaultPackageResolver : IPackageResolver
                 // 解析版本范围到具体版本
                 var concreteVersion =
                     await ResolveVersionToConcrete(dependency.PackageId, dependency.VersionRange, packageSources);
+
                 if (string.IsNullOrEmpty(concreteVersion))
                 {
-                    result.Conflicts.Add(
-                        $"Cannot resolve version {dependency.VersionRange} for package {dependency.PackageId}");
+                    var conflictMessage =
+                        $"Cannot resolve version {dependency.VersionRange} for package {dependency.PackageId}";
+                    result.Conflicts.Add(conflictMessage);
+
+                    _logger.VersionConflict(dependency.PackageId, conflictMessage,
+                        new DependencyResolutionException(conflictMessage, dependency.PackageId));
+
                     if (dependency.IsRequired)
                     {
-                        throw new InvalidOperationException(
-                            $"Required dependency {dependency.PackageId} version {dependency.VersionRange} cannot be resolved.");
+                        throw new DependencyResolutionException(
+                            $"Required dependency {dependency.PackageId} version {dependency.VersionRange} cannot be resolved.",
+                            dependency.PackageId);
                     }
 
                     continue;
                 }
+
+                _logger.LogDebug("Resolved version '{Version}' for dependency '{PackageId}' (requested: '{VersionRange}')",
+                    concreteVersion, dependency.PackageId, dependency.VersionRange);
 
                 // 递归解析子依赖
                 await ResolveDependenciesRecursive(dependency.PackageId, concreteVersion, packageSources,
@@ -115,22 +188,46 @@ public class DefaultPackageResolver : IPackageResolver
     private async Task<string?> ResolveVersionToConcrete(string packageId, string versionRange,
         IEnumerable<IPackageSource> sources)
     {
+        _logger.LogDebug("Resolving version range '{VersionRange}' for package '{PackageId}'",
+            versionRange, packageId);
+
         foreach (var source in sources)
         {
             try
             {
                 var versions = await source.GetPackageVersionsAsync(packageId, true);
-                var concreteVersion = versions.FirstOrDefault(v => IsVersionCompatible(versionRange, v));
+                var versionList = versions as string[] ?? versions.ToArray();
+
+                if (!versionList.Any())
+                {
+                    _logger.LogDebug("No versions found for package '{PackageId}' in source '{SourceName}'",
+                        packageId, source.Name);
+                    continue;
+                }
+
+                var concreteVersion = versionList.FirstOrDefault(v => IsVersionCompatible(versionRange, v));
 
                 if (concreteVersion != null)
+                {
+                    _logger.LogDebug("Resolved version '{Version}' for package '{PackageId}' from source '{SourceName}'",
+                        concreteVersion, packageId, source.Name);
                     return concreteVersion;
+                }
+            }
+            catch (PackageSourceException ex)
+            {
+                _logger.LogWarning(ex, "Failed to get versions for package '{PackageId}' from source '{SourceName}'",
+                    packageId, source.Name);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting versions for {packageId} from {source.Name}: {ex.Message}");
+                _logger.LogError(ex, "Unexpected error getting versions for package '{PackageId}' from source '{SourceName}'",
+                    packageId, source.Name);
             }
         }
 
+        _logger.LogWarning("Could not resolve version range '{VersionRange}' for package '{PackageId}' from any source",
+            versionRange, packageId);
         return null;
     }
 
