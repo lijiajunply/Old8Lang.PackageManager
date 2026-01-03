@@ -27,11 +27,25 @@ builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection("Se
 builder.Services.Configure<OidcConfiguration>(builder.Configuration.GetSection("Authentication:OIDC"));
 builder.Services.Configure<AuthenticationConfiguration>(builder.Configuration.GetSection("Authentication"));
 
-// 注册 PackageStorageOptions 为单例，供证书存储服务使用
+// 注册配置类为单例，供需要直接注入的服务使用
 builder.Services.AddSingleton(sp =>
 {
     var options = new PackageStorageOptions();
     builder.Configuration.GetSection("PackageStorage").Bind(options);
+    return options;
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var options = new ApiOptions();
+    builder.Configuration.GetSection("Api").Bind(options);
+    return options;
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var options = new SecurityOptions();
+    builder.Configuration.GetSection("Security").Bind(options);
     return options;
 });
 
@@ -60,15 +74,22 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<OidcAuthenticationService>();
 
 // 配置认证
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = "oidc-github"; // 默认使用 GitHub 登录
 });
 
-// 延迟配置认证，在所有服务注册后
-builder.Services.AddSingleton<IStartupFilter>(new AuthenticationStartupFilter());
+// 配置 OIDC 认证（需要在构建服务提供者之前完成）
+var oidcConfig = builder.Configuration.GetSection("Authentication:OIDC").Get<OidcConfiguration>();
+if (oidcConfig != null)
+{
+    var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+    var logger = loggerFactory.CreateLogger<OidcAuthenticationService>();
+    var oidcService = new OidcAuthenticationService(logger, null!, Microsoft.Extensions.Options.Options.Create(oidcConfig));
+    oidcService.ConfigureOidcAuthentication(authBuilder);
+}
 
 // 添加存储服务（支持多种存储后端）
 builder.Services.AddStorageServices(builder.Configuration);

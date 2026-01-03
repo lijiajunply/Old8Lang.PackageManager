@@ -146,7 +146,7 @@ public class NpmController(
     /// <summary>
     /// 下载包文件 (NPM 兼容)
     /// </summary>
-    [HttpGet("download/{*packageName}/{fileName}")]
+    [HttpGet("download/{packageName}/-/{fileName}")]
     public async Task<IActionResult> DownloadPackage(string packageName, string fileName)
     {
         try
@@ -360,7 +360,7 @@ public class NpmController(
     /// <summary>
     /// 删除包版本 (NPM 兼容)
     /// </summary>
-    [HttpDelete("{*packageName}/{version}")]
+    [HttpDelete("{packageName}/{version}")]
     public async Task<IActionResult> UnpublishPackageVersion(string packageName, string version)
     {
         try

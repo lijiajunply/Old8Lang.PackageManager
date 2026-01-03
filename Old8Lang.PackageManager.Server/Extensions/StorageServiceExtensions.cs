@@ -30,6 +30,9 @@ public static class StorageServiceExtensions
         var storageConfig = configuration.GetSection("Storage").Get<StorageConfiguration>()
             ?? new StorageConfiguration();
 
+        // 注册 StorageConfiguration 为单例，供 StorageProviderFactory 使用
+        services.AddSingleton(storageConfig);
+
         // 根据配置的提供程序类型注册相应的客户端
         switch (storageConfig.ProviderType)
         {

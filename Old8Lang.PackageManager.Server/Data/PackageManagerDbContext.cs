@@ -285,14 +285,15 @@ public class PackageManagerDbContext(DbContextOptions<PackageManagerDbContext> o
     private static void SeedData(ModelBuilder modelBuilder)
     {
         // 创建默认 API 密钥
+        // 注意：使用固定的日期和密钥值避免每次构建模型时产生变化
         var apiKey = new ApiKeyEntity
         {
             Id = 1,
             Name = "Development API Key",
-            Key = GenerateApiKey(),
+            Key = "dev-api-key-12345678901234567890abcdefghijklmnopqrstuvwxyz",
             Description = "开发环境使用的默认 API 密钥",
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddYears(1),
+            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            ExpiresAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             IsActive = true,
             Scopes = "package:read,package:write,admin:all",
             UsageCount = 0
