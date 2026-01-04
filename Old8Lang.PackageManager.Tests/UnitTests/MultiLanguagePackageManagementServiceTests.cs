@@ -7,43 +7,48 @@ using Moq;
 using Old8Lang.PackageManager.Server.Data;
 using Old8Lang.PackageManager.Server.Models;
 using Old8Lang.PackageManager.Server.Services;
-
-using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.InMemory;
-using System.Linq.Expressions;
-using System.Collections;
+using Old8Lang.PackageManager.Core.Models;
 
 namespace Old8Lang.PackageManager.Tests.UnitTests;
 
 /// <summary>
 /// 多语言包管理服务单元测试
 /// </summary>
-public class MultiLanguagePackageManagementServiceTests
+public class MultiLanguagePackageManagementServiceTests : IDisposable
 {
-    private readonly Mock<PackageManagerDbContext> _mockDbContext;
+    private readonly PackageManagerDbContext _dbContext;
     private readonly Mock<IPackageStorageService> _mockStorageService;
     private readonly Mock<IPythonPackageParser> _mockPythonParser;
     private readonly Mock<ILogger<PackageManagementService>> _mockLogger;
+    private readonly Mock<IPackageSignatureService> _mockSignatureService;
+    private readonly Mock<IPackageQualityService> _mockQualityService;
     private readonly PackageManagementService _service;
 
     public MultiLanguagePackageManagementServiceTests()
     {
-        var options = new DbContextOptionsBuilder<PackageManagerDbContext>().Options;
-        _mockDbContext = new Mock<PackageManagerDbContext>(options);
+        var options = new DbContextOptionsBuilder<PackageManagerDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        _dbContext = new PackageManagerDbContext(options);
         _mockStorageService = new Mock<IPackageStorageService>();
         _mockPythonParser = new Mock<IPythonPackageParser>();
         _mockLogger = new Mock<ILogger<PackageManagementService>>();
-        var mockSignatureService = new Mock<IPackageSignatureService>();
-        var mockQualityService = new Mock<IPackageQualityService>();
+        _mockSignatureService = new Mock<IPackageSignatureService>();
+        _mockQualityService = new Mock<IPackageQualityService>();
 
         _service = new PackageManagementService(
-            _mockDbContext.Object,
+            _dbContext,
             _mockStorageService.Object,
-            mockSignatureService.Object,
-            mockQualityService.Object,
+            _mockSignatureService.Object,
+            _mockQualityService.Object,
             _mockLogger.Object,
             _mockPythonParser.Object);
+    }
+
+    public void Dispose()
+    {
+        _dbContext?.Dispose();
     }
 
     [Theory]
@@ -54,17 +59,8 @@ public class MultiLanguagePackageManagementServiceTests
     {
         // Arrange
         var package = CreateTestPackage(packageId, version, language);
-        var packages = new List<PackageEntity> { package }.AsQueryable();
-        
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Provider).Returns(packages.Provider);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Expression).Returns(packages.Expression);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.ElementType).Returns(packages.ElementType);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.GetEnumerator()).Returns(packages.GetEnumerator());
-        
-
-
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
+        _dbContext.Packages.Add(package);
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _service.GetPackageAsync(packageId, version, language);
@@ -82,21 +78,12 @@ public class MultiLanguagePackageManagementServiceTests
     public async Task SearchPackagesAsync_ShouldFilterByLanguage(string searchTerm, string language)
     {
         // Arrange
-        var packages = new List<PackageEntity>
-        {
-            CreateTestPackage("test-package", "1.0.0", "old8lang"),
-            CreateTestPackage("test-package", "1.0.0", "python"),
-            CreateTestPackage("other-package", "1.0.0", language)
-        }.AsQueryable();
-
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Provider).Returns(packages.Provider);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Expression).Returns(packages.Expression);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.ElementType).Returns(packages.ElementType);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.GetEnumerator()).Returns(packages.GetEnumerator());
-
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
-        _mockDbContext.Setup(c => c.Packages.Include(It.IsAny<string>())).Returns(mockSet.Object);
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "1.0.0", "old8lang"));
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "1.0.0", "python"));
+        _dbContext.Packages.Add(CreateTestPackage("requests", "2.28.0", "old8lang"));
+        _dbContext.Packages.Add(CreateTestPackage("requests", "2.28.0", "python"));
+        _dbContext.Packages.Add(CreateTestPackage("other-package", "1.0.0", language));
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _service.SearchPackagesAsync(searchTerm, language);
@@ -111,42 +98,34 @@ public class MultiLanguagePackageManagementServiceTests
     public async Task GetPopularPackagesAsync_ShouldReturnLanguageSpecificPackages()
     {
         // Arrange
-        var packages = new List<PackageEntity>
-        {
-            CreateTestPackage("popular-py", "1.0.0", "python", downloadCount: 1000),
-            CreateTestPackage("popular-o8", "1.0.0", "old8lang", downloadCount: 800),
-            CreateTestPackage("less-popular", "1.0.0", "python", downloadCount: 100)
-        }.AsQueryable();
-
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Provider).Returns(packages.Provider);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Expression).Returns(packages.Expression);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.ElementType).Returns(packages.ElementType);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.GetEnumerator()).Returns(packages.GetEnumerator());
-
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
-        _mockDbContext.Setup(c => c.Packages.Include(It.IsAny<string>())).Returns(mockSet.Object);
+        _dbContext.Packages.Add(CreateTestPackage("popular-py", "1.0.0", "python", downloadCount: 1000));
+        _dbContext.Packages.Add(CreateTestPackage("popular-o8", "1.0.0", "old8lang", downloadCount: 800));
+        _dbContext.Packages.Add(CreateTestPackage("less-popular", "1.0.0", "python", downloadCount: 100));
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var pythonResult = await _service.GetPopularPackagesAsync("python");
-        var old8langResult = await _service.GetPopularPackagesAsync("old8lang");
+        var old8LangResult = await _service.GetPopularPackagesAsync("old8lang");
 
         // Assert
         pythonResult.Should().HaveCount(2);
         pythonResult.Should().Contain(p => p.PackageId == "popular-py");
         pythonResult.Should().Contain(p => p.PackageId == "less-popular");
 
-        old8langResult.Should().HaveCount(1);
-        old8langResult.Should().Contain(p => p.PackageId == "popular-o8");
+        old8LangResult.Should().HaveCount(1);
+        old8LangResult.Should().Contain(p => p.PackageId == "popular-o8");
     }
 
     [Fact]
     public async Task UploadPackageAsync_ShouldHandlePythonPackageUpload()
     {
         // Arrange
+        var packageStream = new MemoryStream(new byte[1024]);
+
         var packageFile = new Mock<IFormFile>();
         packageFile.Setup(f => f.FileName).Returns("test-package-1.0.0-py3-none-any.whl");
         packageFile.Setup(f => f.Length).Returns(1024L);
+        packageFile.Setup(f => f.OpenReadStream()).Returns(packageStream);
 
         var pythonInfo = new PythonPackageInfo
         {
@@ -160,7 +139,6 @@ public class MultiLanguagePackageManagementServiceTests
             }
         };
 
-        var packageStream = new MemoryStream();
         _mockPythonParser.Setup(p => p.ParsePackageAsync(It.IsAny<Stream>(), "test-package-1.0.0-py3-none-any.whl"))
                       .ReturnsAsync(pythonInfo);
 
@@ -174,6 +152,12 @@ public class MultiLanguagePackageManagementServiceTests
         _mockStorageService.Setup(s => s.GetPackageSizeAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(1024L);
 
+        _mockSignatureService.Setup(s => s.VerifyPackageSignatureAsync(It.IsAny<string>()))
+                .ReturnsAsync(SignatureVerificationResult.Failure("Not signed"));
+
+        _mockQualityService.Setup(s => s.CalculateQualityScoreAsync(It.IsAny<PackageEntity>()))
+                .ReturnsAsync((PackageQualityScoreEntity?)null!);
+
         var request = new PackageUploadRequest
         {
             PackageFile = packageFile.Object,
@@ -185,10 +169,6 @@ public class MultiLanguagePackageManagementServiceTests
                 new() { PackageName = "numpy", VersionSpec = ">=1.21.0" }
             }
         };
-
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
-        _mockDbContext.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
 
         // Act
         var result = await _service.UploadPackageAsync(request, packageStream);
@@ -206,11 +186,13 @@ public class MultiLanguagePackageManagementServiceTests
     public async Task UploadPackageAsync_ShouldHandleOld8LangPackageUpload()
     {
         // Arrange
+        var packageStream = new MemoryStream(new byte[1024]);
+
         var packageFile = new Mock<IFormFile>();
         packageFile.Setup(f => f.FileName).Returns("test-package-1.0.0.o8pkg");
         packageFile.Setup(f => f.Length).Returns(1024L);
+        packageFile.Setup(f => f.OpenReadStream()).Returns(packageStream);
 
-        var packageStream = new MemoryStream();
         _mockStorageService.Setup(s => s.StorePackageAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>()))
                 .ReturnsAsync("/test/path");
@@ -221,6 +203,12 @@ public class MultiLanguagePackageManagementServiceTests
         _mockStorageService.Setup(s => s.GetPackageSizeAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(1024L);
 
+        _mockSignatureService.Setup(s => s.VerifyPackageSignatureAsync(It.IsAny<string>()))
+                .ReturnsAsync(SignatureVerificationResult.Failure("Not signed"));
+
+        _mockQualityService.Setup(s => s.CalculateQualityScoreAsync(It.IsAny<PackageEntity>()))
+                .ReturnsAsync((PackageQualityScoreEntity?)null!);
+
         var request = new PackageUploadRequest
         {
             PackageFile = packageFile.Object,
@@ -228,10 +216,6 @@ public class MultiLanguagePackageManagementServiceTests
             Author = "Test Author",
             Description = "Test Description"
         };
-
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
-        _mockDbContext.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
 
         // Act
         var result = await _service.UploadPackageAsync(request, packageStream);
@@ -289,22 +273,11 @@ public class MultiLanguagePackageManagementServiceTests
     public async Task GetAllVersionsAsync_ShouldReturnAllVersionsForPackage()
     {
         // Arrange
-        var packages = new List<PackageEntity>
-        {
-            CreateTestPackage("test-package", "1.0.0", "python"),
-            CreateTestPackage("test-package", "1.1.0", "python"),
-            CreateTestPackage("test-package", "1.0.0", "old8lang"),
-            CreateTestPackage("test-package", "2.0.0", "python")
-        }.AsQueryable();
-
-        var mockSet = new Mock<DbSet<PackageEntity>>();
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Provider).Returns(packages.Provider);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.Expression).Returns(packages.Expression);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.ElementType).Returns(packages.ElementType);
-        mockSet.As<IQueryable<PackageEntity>>().Setup(m => m.GetEnumerator()).Returns(packages.GetEnumerator());
-
-        _mockDbContext.Setup(c => c.Packages).Returns(mockSet.Object);
-        _mockDbContext.Setup(c => c.Packages.Include(It.IsAny<string>())).Returns(mockSet.Object);
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "1.0.0", "python"));
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "1.1.0", "python"));
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "1.0.0", "old8lang"));
+        _dbContext.Packages.Add(CreateTestPackage("test-package", "2.0.0", "python"));
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _service.GetAllVersionsAsync("test-package");
@@ -344,7 +317,7 @@ public class MultiLanguagePackageManagementServiceTests
     {
         return new PackageEntity
         {
-            Id = 1,
+            // Don't set Id - let EF Core auto-generate it to avoid primary key conflicts
             PackageId = packageId,
             Version = version,
             Language = language,

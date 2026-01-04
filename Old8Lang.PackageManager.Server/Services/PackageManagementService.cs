@@ -332,7 +332,8 @@ public class PackageManagementService(
         // 为简化示例，返回默认的包信息
         
         packageStream.Position = 0;
-        using var reader = new StreamReader(packageStream);
+        // Use leaveOpen: true to prevent StreamReader from closing the underlying stream
+        using var reader = new StreamReader(packageStream, leaveOpen: true);
         var firstLine = await reader.ReadLineAsync();
         packageStream.Position = 0;
         
