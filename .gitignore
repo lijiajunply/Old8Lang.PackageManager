@@ -76,3 +76,7 @@ appsettings.Local.json
 
 # Package cache
 o8packages.json.backup
+
+*.db
+*.db-shm
+*.db-wal
