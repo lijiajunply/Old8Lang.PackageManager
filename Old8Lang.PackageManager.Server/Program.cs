@@ -7,6 +7,7 @@ using Old8Lang.PackageManager.Server.Extensions;
 using Old8Lang.PackageManager.Server.Middleware;
 using System.Globalization;
 using DotNetEnv;
+using Scalar.AspNetCore;
 
 // Load .env file if it exists (development mode)
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -54,12 +55,10 @@ var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "
 switch (dbProvider.ToUpperInvariant())
 {
     case "POSTGRESQL":
-        // 先添加 Npgsql 包，暂时注释掉
         builder.Services.AddDbContext<PackageManagerDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
         break;
     case "SQLSERVER":
-        // 先添加 SqlServer 包，暂时注释掉
         builder.Services.AddDbContext<PackageManagerDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         break;
@@ -174,6 +173,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // 添加 Scalar API 文档
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
@@ -205,8 +207,5 @@ app.MapGet("/health", () => Results.Ok(new
     timestamp = DateTime.UtcNow,
     version = "1.0.0"
 })).WithName("HealthCheck");
-
-// 根路径重定向到 API 文档
-app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 app.Run();
